@@ -3,6 +3,7 @@ import { useInspection } from '@/store/useInspection';
 import { PhaseTimeline } from './PhaseTimeline';
 import { ProgressMeter } from './ProgressMeter';
 import { PhasePanel } from './PhasePanel';
+import { SaveIndicator } from './SaveIndicator';
 import { aggregateRisk } from '@/lib/fr';
 import { cn } from '@/lib/cn';
 
@@ -46,7 +47,8 @@ export function CaptureScreen() {
             <Meta label="T" value={String(meta.sampleCount)} />
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <SaveIndicator />
             <button
               type="button"
               onClick={() => {

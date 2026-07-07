@@ -47,3 +47,7 @@ coverage/
 # TS composite build artifacts (emitted from vite.config.ts)
 vite.config.js
 vite.config.d.ts
+
+# Generated reports (keep the folder + its README, ignore exports)
+reports/*
+!reports/README.md
