@@ -1,0 +1,112 @@
+import type { Phase } from '@/types';
+
+/**
+ * Canonical inspection phase list, seeded from the reference FGA deck.
+ *
+ * This is intentionally config-driven: reordering, adding, or removing a phase
+ * here changes both the capture workflow and the generated slide deck 1:1,
+ * without touching component code.
+ */
+export type PhaseTemplate = Pick<
+  Phase,
+  'id' | 'title' | 'guidance' | 'slideOrder' | 'required'
+>;
+
+export const PHASE_TEMPLATES: PhaseTemplate[] = [
+  {
+    id: 'external-case-pack',
+    title: 'External Box — Case Pack',
+    guidance:
+      'Photograph the outer cardboard case pack on all sides. Check for crushing, tears, water damage, and label legibility.',
+    slideOrder: 1,
+    required: true,
+  },
+  {
+    id: 'external-sku',
+    title: 'External SKU',
+    guidance:
+      'Unbox the case pack and photograph the packed SKU on all sides. Look for scratches, fractures, dirt, oil, and marks.',
+    slideOrder: 2,
+    required: true,
+  },
+  {
+    id: 'external-retail-box',
+    title: 'External Retail Box',
+    guidance:
+      'Photograph the retail box exterior, all faces. Verify print quality, artwork alignment, and seals.',
+    slideOrder: 3,
+    required: true,
+  },
+  {
+    id: 'tear-label',
+    title: 'Tear Label Inspection',
+    guidance:
+      'Inspect the tear label / tamper evidence. Confirm placement, adhesion, and that it tears correctly.',
+    slideOrder: 4,
+    required: true,
+  },
+  {
+    id: 'internal-box',
+    title: 'Internal Box',
+    guidance:
+      'Open the retail box and photograph the interior with the device still packed. Check for dirt, scratches, and fractures.',
+    slideOrder: 5,
+    required: true,
+  },
+  {
+    id: 'internal-sku-box',
+    title: 'Internal SKU Box',
+    guidance:
+      'Photograph the inner SKU packaging and how the device is seated. Verify fit and protective materials.',
+    slideOrder: 6,
+    required: true,
+  },
+  {
+    id: 'device',
+    title: 'Device Inspection',
+    guidance:
+      'Remove the device and inspect it. Confirm the "Not For Sale" label is attached, and check for surface cracks, fractures, and dirt.',
+    slideOrder: 7,
+    required: true,
+  },
+  {
+    id: 'packing-tray',
+    title: 'Packing Tray',
+    guidance:
+      'Photograph the packing tray. Verify structure, fit, and absence of damage.',
+    slideOrder: 8,
+    required: true,
+  },
+  {
+    id: 'accessory-box',
+    title: 'Accessories (PSU, Ethernet, Clamps, WSL)',
+    guidance:
+      'Inspect and photograph all accessories: PSU, ethernet cables, clamps, and WSL. Check completeness and condition.',
+    slideOrder: 9,
+    required: true,
+  },
+  {
+    id: 'qr-signs',
+    title: 'QR Codes',
+    guidance:
+      'Verify all QR codes are present and scannable. Capture a photo of each and note scan results.',
+    slideOrder: 10,
+    required: true,
+  },
+  {
+    id: 'documents',
+    title: 'Warranty, Safety & Legal Documents',
+    guidance:
+      'Confirm the correct Warranty, Safety, and Legal documents are packed for the SKU-to-country mapping.',
+    slideOrder: 11,
+    required: true,
+  },
+  {
+    id: 'power-on',
+    title: 'Power-On Test',
+    guidance:
+      'Confirm the device powers on. Photograph the LED/boot state and note the result.',
+    slideOrder: 12,
+    required: true,
+  },
+];
