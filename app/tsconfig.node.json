@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "types": ["node"],
+    "outDir": "./node_modules/.cache/tsconfig-node",
     "strict": true
   },
   "include": ["vite.config.ts"]
