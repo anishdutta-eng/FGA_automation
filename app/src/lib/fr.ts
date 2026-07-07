@@ -41,6 +41,15 @@ export function phaseFr(phase: Phase, sampleCount: number): FrResult {
   return computeFr(failed, sampleCount);
 }
 
+/**
+ * A phase is "complete" once it has been both documented (at least one photo)
+ * and assessed (at least one observation). This drives the green/grey status
+ * light in the timeline and the overall progress + export gate.
+ */
+export function isPhaseComplete(phase: Phase): boolean {
+  return phase.photos.length > 0 && phase.observations.length > 0;
+}
+
 /** The worst (highest) risk level present in a set of observations. */
 export function aggregateRisk(observations: Observation[]): RiskLevel | null {
   if (observations.length === 0) return null;

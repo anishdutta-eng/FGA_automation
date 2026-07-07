@@ -121,11 +121,21 @@ export function SetupScreen() {
             <input
               type="number"
               min={1}
+              inputMode="numeric"
               className="input"
-              value={meta.sampleCount}
-              onChange={(e) =>
-                set({ sampleCount: Math.max(1, Number(e.target.value)) })
-              }
+              value={meta.sampleCount === 0 ? '' : meta.sampleCount}
+              onChange={(e) => {
+                const raw = e.target.value;
+                set({
+                  sampleCount:
+                    raw === '' ? 0 : Math.max(0, Math.floor(Number(raw) || 0)),
+                });
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || Number(e.target.value) < 1) {
+                  set({ sampleCount: 1 });
+                }
+              }}
             />
             <p className="mt-1.5 text-xs text-ink-400">
               Failure Rate is computed as failed samples ÷ this count.

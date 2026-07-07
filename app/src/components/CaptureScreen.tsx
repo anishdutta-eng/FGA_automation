@@ -4,8 +4,8 @@ import { PhaseTimeline } from './PhaseTimeline';
 import { ProgressMeter } from './ProgressMeter';
 import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
-import { aggregateRisk } from '@/lib/fr';
-import { cn } from '@/lib/cn';
+import { GenerateModal } from './GenerateModal';
+import { aggregateRisk, isPhaseComplete } from '@/lib/fr';
 
 export function CaptureScreen() {
   const meta = useInspection((s) => s.meta);
@@ -13,12 +13,12 @@ export function CaptureScreen() {
   const activePhaseId = useInspection((s) => s.activePhaseId);
   const setActivePhase = useInspection((s) => s.setActivePhase);
   const resetInspection = useInspection((s) => s.resetInspection);
-  const [exportNote, setExportNote] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
 
   const activePhase = phases.find((p) => p.id === activePhaseId) ?? phases[0];
 
   const requiredPhases = phases.filter((p) => p.required);
-  const completed = requiredPhases.filter((p) => p.photos.length > 0).length;
+  const completed = requiredPhases.filter(isPhaseComplete).length;
   const allRequiredDone = completed === requiredPhases.length;
 
   const anyFail = useMemo(
@@ -63,15 +63,15 @@ export function CaptureScreen() {
             <button
               type="button"
               disabled={!allRequiredDone}
-              onClick={() => setExportNote(true)}
+              onClick={() => setShowGenerate(true)}
               className="btn-primary"
               title={
                 allRequiredDone
-                  ? 'Generate the slide deck'
-                  : 'Add photos to all required phases first'
+                  ? 'Generate the report'
+                  : 'Complete all required phases (photos + observations) first'
               }
             >
-              Generate Deck
+              Generate Report
             </button>
           </div>
         </div>
@@ -106,9 +106,7 @@ export function CaptureScreen() {
         </main>
       </div>
 
-      {exportNote && (
-        <ExportNote onClose={() => setExportNote(false)} />
-      )}
+      {showGenerate && <GenerateModal onClose={() => setShowGenerate(false)} />}
     </div>
   );
 }
@@ -125,32 +123,3 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ExportNote({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-6 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className={cn('card max-w-md p-6 text-center')}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50">
-          <svg className="h-6 w-6 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-bold text-ink-900">Ready to export</h3>
-        <p className="mt-1.5 text-sm text-ink-500">
-          All required phases are documented. Google Slides export lands in the
-          next build step — your captured photos and observations are all held
-          and ready to assemble into the deck.
-        </p>
-        <button type="button" onClick={onClose} className="btn-primary mt-5 w-full">
-          Got it
-        </button>
-      </div>
-    </div>
-  );
-}
