@@ -43,3 +43,7 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# TS composite build artifacts (emitted from vite.config.ts)
+vite.config.js
+vite.config.d.ts
