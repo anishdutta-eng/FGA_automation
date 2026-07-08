@@ -67,7 +67,7 @@ export function SetupScreen() {
             <Field label="FGA JIRA">
               <input
                 className="input"
-                placeholder="e.g. FGA-1234"
+                placeholder="e.g. LUX-1234"
                 value={meta.fgaJira}
                 onChange={(e) => set({ fgaJira: e.target.value })}
               />
@@ -75,7 +75,7 @@ export function SetupScreen() {
             <Field label="SKU">
               <input
                 className="input"
-                placeholder="e.g. 860-00181"
+                placeholder="e.g. SN1111"
                 value={meta.sku}
                 onChange={(e) => set({ sku: e.target.value })}
               />
@@ -85,9 +85,11 @@ export function SetupScreen() {
           <Field label="eero Product Name">
             <input
               className="input"
-              placeholder="e.g. Snowbird / Goldfinch"
+              placeholder="e.g. eero Max 7"
               value={meta.productName}
-              onChange={(e) => set({ productName: e.target.value })}
+              onChange={(e) =>
+                set({ productName: e.target.value.replace(/eero/gi, 'eero') })
+              }
             />
           </Field>
 
@@ -145,7 +147,7 @@ export function SetupScreen() {
             <Field label="DRI">
               <input
                 className="input"
-                placeholder="e.g. @JC"
+                placeholder="e.g. Anish"
                 value={meta.dri}
                 onChange={(e) => set({ dri: e.target.value })}
               />
