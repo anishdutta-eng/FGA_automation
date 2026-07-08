@@ -40,24 +40,25 @@ export function SetupScreen() {
     meta.unitsPerPack >= 1;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-ink-100 p-6">
+    <div className="flex min-h-screen items-center justify-center bg-ink-50 p-6">
       <div className="w-full max-w-2xl animate-fade-in">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-lift">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full border-[3px] border-white/80">
-              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-            </span>
+        <div className="mb-9 text-center">
+          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-ink-900">
+            <span className="h-3 w-3 rounded-full bg-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink-900">
-            FGA Inspection Studio
+          <h1 className="text-4xl font-bold lowercase tracking-tight text-ink-900">
+            eero
           </h1>
-          <p className="mt-1.5 text-sm text-ink-500">
+          <p className="mt-1 text-base font-medium tracking-tight text-ink-600">
+            Inspection Studio
+          </p>
+          <p className="mt-3 text-sm text-ink-400">
             Document a hardware inspection and generate a review-ready deck.
           </p>
         </div>
 
         <form
-          className="card space-y-5 p-6"
+          className="card space-y-5 p-8"
           onSubmit={(e) => {
             e.preventDefault();
             if (canStart) startInspection(meta);
@@ -102,7 +103,7 @@ export function SetupScreen() {
                   type="button"
                   onClick={() => setBox(b.id)}
                   className={cn(
-                    'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                    'rounded-full border px-4 py-2 text-sm font-semibold transition',
                     meta.boxType === b.id
                       ? 'border-brand-600 bg-brand-600 text-white shadow-card'
                       : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300',
@@ -123,7 +124,7 @@ export function SetupScreen() {
                   type="button"
                   onClick={() => set({ phaseGate: g.id as PhaseGateId })}
                   className={cn(
-                    'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                    'rounded-full border px-4 py-2 text-sm font-semibold transition',
                     meta.phaseGate === g.id
                       ? 'border-brand-600 bg-brand-600 text-white shadow-card'
                       : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300',
@@ -226,7 +227,7 @@ export function SetupScreen() {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={!canStart}>
+          <button type="submit" className="btn-dark w-full" disabled={!canStart}>
             Start inspection
           </button>
         </form>

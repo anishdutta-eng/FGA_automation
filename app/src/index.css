@@ -21,11 +21,11 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-ink-200 bg-white shadow-card;
+    @apply rounded-3xl border border-ink-100 bg-white shadow-card;
   }
 
   .input {
-    @apply w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900
+    @apply w-full rounded-2xl border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-900
       placeholder:text-ink-400 transition focus:border-brand-500 focus:outline-none
       focus:ring-4 focus:ring-brand-500/10;
   }
@@ -34,14 +34,20 @@
     @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-500;
   }
 
+  /* eero-style pill buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm
       font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
     @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:outline-none
       focus:ring-4 focus:ring-brand-500/20;
+  }
+
+  .btn-dark {
+    @apply btn bg-ink-900 text-white hover:bg-ink-800 focus:outline-none
+      focus:ring-4 focus:ring-ink-900/15;
   }
 
   .btn-ghost {

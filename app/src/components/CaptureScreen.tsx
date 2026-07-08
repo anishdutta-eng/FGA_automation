@@ -5,6 +5,7 @@ import { ProgressMeter } from './ProgressMeter';
 import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
 import { GenerateModal } from './GenerateModal';
+import { Wordmark } from './Wordmark';
 import { aggregateColor, isPhaseComplete, totalUnits } from '@/lib/fr';
 
 export function CaptureScreen() {
@@ -31,13 +32,11 @@ export function CaptureScreen() {
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-ink-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800">
-              <span className="h-3.5 w-3.5 rounded-full border-2 border-white/80" />
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-900">
+              <span className="h-2.5 w-2.5 rounded-full bg-white" />
             </span>
-            <span className="font-bold tracking-tight text-ink-900">
-              FGA Inspection Studio
-            </span>
+            <Wordmark />
           </div>
 
           <div className="hidden items-center gap-x-4 gap-y-0.5 text-xs text-ink-500 sm:flex sm:flex-wrap">
@@ -64,7 +63,7 @@ export function CaptureScreen() {
               type="button"
               disabled={!allRequiredDone}
               onClick={() => setShowGenerate(true)}
-              className="btn-primary"
+              className="btn-dark"
               title={
                 allRequiredDone
                   ? 'Generate the report'
