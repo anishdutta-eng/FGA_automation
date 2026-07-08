@@ -74,7 +74,7 @@ export function PhaseTimeline({
             onClick={() => onSelect(phase.id)}
             className={cn(
               'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition',
-              active ? 'bg-ink-900 text-white shadow-lift' : 'hover:bg-ink-100',
+              active ? 'bg-brand-700 text-white shadow-lift' : 'hover:bg-ink-100',
             )}
           >
             <StatusLight complete={complete} color={color} active={active} />

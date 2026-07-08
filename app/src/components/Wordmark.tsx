@@ -7,28 +7,20 @@ interface WordmarkProps {
 }
 
 /**
- * eero-style wordmark: the brand is always lowercase. Paired with a subtle
- * "Inspection Studio" label so the tool reads as an eero property.
+ * FGA logo lockup: a purple "FGA" badge with a green accent dot, paired with
+ * an "Inspection Studio" label.
  */
 export function Wordmark({ onDark = false, className }: WordmarkProps) {
   return (
-    <div className={cn('flex items-baseline gap-2.5', className)}>
-      <span
-        className={cn(
-          'text-lg font-bold lowercase tracking-tight',
-          onDark ? 'text-white' : 'text-ink-900',
-        )}
-      >
-        eero
+    <div className={cn('flex items-center gap-2.5', className)}>
+      <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 px-2 py-1 shadow-sm">
+        <span className="text-sm font-extrabold tracking-tight text-white">FGA</span>
+        <span className="h-1.5 w-1.5 rounded-full bg-accent-400" />
       </span>
       <span
-        className={cn('h-3 w-px', onDark ? 'bg-white/25' : 'bg-ink-200')}
-        aria-hidden
-      />
-      <span
         className={cn(
-          'text-sm font-medium tracking-tight',
-          onDark ? 'text-white/70' : 'text-ink-500',
+          'text-sm font-semibold tracking-tight',
+          onDark ? 'text-white/80' : 'text-ink-700',
         )}
       >
         Inspection Studio

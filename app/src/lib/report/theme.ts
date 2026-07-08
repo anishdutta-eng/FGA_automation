@@ -7,24 +7,24 @@ import type { ColorKey } from '@/types';
  */
 
 export const COLORS = {
-  ink: '17233B',
-  inkSoft: '3E4A63',
-  muted: '8894A8',
-  line: 'D7DEE8',
+  ink: '111114',
+  inkSoft: '3A3B45',
+  muted: '8A8C99',
+  line: 'DCDCE1',
   paper: 'FFFFFF',
-  panel: 'F5F7FA',
-  brand: '2563EB',
+  panel: 'F7F7F8',
+  brand: '7C3AED',
   white: 'FFFFFF',
 } as const;
 
-/** Title-slide blue palette. */
+/** Title-slide palette: elegant purple with a green highlight. */
 export const TITLE = {
-  bg: '123A6B',
-  band: '0E2E56',
-  accent: '3B82F6',
+  bg: '3A1D6E',
+  band: '2C1556',
+  accent: '34D399',
   text: 'FFFFFF',
-  sub: 'CFE0FB',
-  muted: '9DB8E4',
+  sub: 'E3DAF7',
+  muted: 'B4A3DE',
 } as const;
 
 export interface RiskPalette {

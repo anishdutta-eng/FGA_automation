@@ -90,15 +90,49 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
   const slide = pptx.addSlide();
   slide.background = { color: TITLE.bg };
 
-  // Darker band on the left for depth
+  // Top band for the brand lockup
   slide.addShape('rect', {
     x: 0,
     y: 0,
     w: LAYOUT.width,
-    h: 1.7,
+    h: 1.5,
     fill: { color: TITLE.band },
     line: { type: 'none' },
   });
+
+  // FGA wordmark + green accent dot
+  slide.addText('FGA', {
+    x: 0.9,
+    y: 0.5,
+    w: 1.5,
+    h: 0.5,
+    fontFace: FONT.face,
+    fontSize: 22,
+    bold: true,
+    color: TITLE.text,
+    valign: 'middle',
+  });
+  slide.addShape('ellipse', {
+    x: 1.98,
+    y: 0.73,
+    w: 0.15,
+    h: 0.15,
+    fill: { color: TITLE.accent },
+    line: { type: 'none' },
+  });
+  slide.addText('Inspection Studio', {
+    x: 9.3,
+    y: 0.5,
+    w: 3.1,
+    h: 0.5,
+    align: 'right',
+    fontFace: FONT.face,
+    fontSize: FONT.body,
+    color: TITLE.muted,
+    valign: 'middle',
+  });
+
+  // Accent bar
   slide.addShape('rect', {
     x: 0.9,
     y: 3.15,
@@ -108,16 +142,16 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
     line: { type: 'none' },
   });
 
-  slide.addText('FGA HARDWARE INSPECTION', {
+  slide.addText('HARDWARE INSPECTION', {
     x: 0.9,
-    y: 0.6,
+    y: 2.15,
     w: 11.5,
-    h: 0.5,
+    h: 0.4,
     fontFace: FONT.face,
-    fontSize: FONT.subheading,
+    fontSize: FONT.body,
     bold: true,
     color: TITLE.sub,
-    charSpacing: 2,
+    charSpacing: 3,
   });
 
   slide.addText(ins.productName || 'Inspection', {
@@ -309,7 +343,7 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
       options: {
         bold: true,
         color: COLORS.white,
-        fill: { color: COLORS.ink },
+        fill: { color: COLORS.brand },
         fontSize: FONT.small,
         valign: 'middle' as const,
       },

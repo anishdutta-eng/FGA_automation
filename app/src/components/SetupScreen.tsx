@@ -43,15 +43,15 @@ export function SetupScreen() {
     <div className="flex min-h-screen items-center justify-center bg-ink-50 p-6">
       <div className="w-full max-w-2xl animate-fade-in">
         <div className="mb-9 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-ink-900">
-            <span className="h-3 w-3 rounded-full bg-white" />
+          <div className="mx-auto mb-5 inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-3 shadow-lift">
+            <span className="text-2xl font-extrabold tracking-tight text-white">
+              FGA
+            </span>
+            <span className="h-2 w-2 rounded-full bg-accent-400" />
           </div>
-          <h1 className="text-4xl font-bold lowercase tracking-tight text-ink-900">
-            eero
-          </h1>
-          <p className="mt-1 text-base font-medium tracking-tight text-ink-600">
+          <h1 className="text-3xl font-bold tracking-tight text-ink-900">
             Inspection Studio
-          </p>
+          </h1>
           <p className="mt-3 text-sm text-ink-400">
             Document a hardware inspection and generate a review-ready deck.
           </p>
@@ -227,7 +227,7 @@ export function SetupScreen() {
             </div>
           </div>
 
-          <button type="submit" className="btn-dark w-full" disabled={!canStart}>
+          <button type="submit" className="btn-primary w-full" disabled={!canStart}>
             Start inspection
           </button>
         </form>
