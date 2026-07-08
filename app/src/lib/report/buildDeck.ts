@@ -1,14 +1,17 @@
 import PptxGenJS from 'pptxgenjs';
-import type { Inspection, Observation, Phase } from '@/types';
+import type { Inspection, Observation, Phase, PhotoSlide } from '@/types';
 import {
   phaseFr,
   aggregateColor,
   colorOf,
   observationFr,
+  observationsFr,
+  phaseObservations,
   phasePhotoCount,
   totalUnits,
   deckDisplayName,
 } from '@/lib/fr';
+
 import { boxType } from '@/config/options';
 import {
   COLORS,
@@ -33,7 +36,9 @@ function sanitize(s: string): string {
 }
 
 function reportablePhases(phases: Phase[]): Phase[] {
-  return phases.filter((p) => phasePhotoCount(p) > 0 || p.observations.length > 0);
+  return phases.filter(
+    (p) => phasePhotoCount(p) > 0 || phaseObservations(p).length > 0,
+  );
 }
 
 function obsPrefix(o: Observation, units: number): string {
@@ -72,13 +77,21 @@ export async function generateDeck(
   buildFindingsTable(pptx, inspection, units);
 
   for (const phase of inspection.phases) {
-    if (phasePhotoCount(phase) === 0 && phase.observations.length === 0) continue;
+    if (phasePhotoCount(phase) === 0 && phaseObservations(phase).length === 0) continue;
     tick(`Adding "${phase.title}"`);
-    const encodedSlides: EncodedPhoto[][] = [];
-    for (const s of phase.slides) {
-      encodedSlides.push(await encodePhotos(s.photos));
+    for (let i = 0; i < phase.slides.length; i++) {
+      const slide = phase.slides[i];
+      if (slide.photos.length === 0 && slide.observations.length === 0) continue;
+      const encoded = await encodePhotos(slide.photos);
+      buildPhaseSlide(
+        pptx,
+        phase,
+        slide,
+        encoded,
+        units,
+        phase.slides.length > 1 ? i + 1 : 0,
+      );
     }
-    buildPhaseSlides(pptx, phase, encodedSlides, units);
   }
 
   await pptx.writeFile({ fileName: `${sanitize(deckName)}.pptx` });
@@ -225,7 +238,11 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
 function buildSummarySlide(pptx: PptxGenJS, ins: Inspection) {
   const slide = pptx.addSlide();
   slide.background = { color: COLORS.paper };
-  slideHeading(slide, 'Inspection Summary');
+  const heading = [ins.productName, ins.sku, ins.countryCode]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(' ');
+  slideHeading(slide, `${heading}${heading ? ' ' : ''}FGA Summary`);
 
   const meta: [string, string][] = [
     ['FGA JIRA', ins.fgaJira || '—'],
@@ -351,12 +368,11 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
   );
 
   const rows = reportablePhases(ins.phases).map((phase) => {
-    const color = aggregateColor(phase.observations) ?? 'good';
+    const obs = phaseObservations(phase);
+    const color = aggregateColor(obs) ?? 'good';
     const p = RISK_PALETTE[color];
     const fr = phaseFr(phase, units);
-    const issues = phase.observations.filter(
-      (o) => o.risk !== 'good' && o.status !== 'waived',
-    );
+    const issues = obs.filter((o) => o.risk !== 'good' && o.status !== 'waived');
     const failureMode = issues.map((o) => o.failureMode || o.text).filter(Boolean).join('; ');
     const nextSteps = issues.map((o) => o.nextSteps).filter(Boolean).join('; ');
     const dri = Array.from(new Set(issues.map((o) => o.dri).filter(Boolean))).join(', ');
@@ -395,25 +411,27 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
   footer(slide);
 }
 
-function buildPhaseSlides(
+/** Build one deck slide from a single photo-slide (its photos + observations). */
+function buildPhaseSlide(
   pptx: PptxGenJS,
   phase: Phase,
-  encodedSlides: EncodedPhoto[][],
+  slideData: PhotoSlide,
+  photos: EncodedPhoto[],
   units: number,
+  slideNo: number, // 0 = the phase has a single slide (no suffix)
 ) {
-  const color = aggregateColor(phase.observations);
-  const fr = phaseFr(phase, units);
+  const color = aggregateColor(slideData.observations);
+  const fr = observationsFr(slideData.observations, units);
   const frText = `${fr.label} · ${fr.percent}`;
-  const showFr = phase.observations.some(
+  const showFr = slideData.observations.some(
     (o) => o.status !== 'waived' && o.risk !== 'good' && o.affectedSamples > 0,
   );
 
-  // First slide: header + observations + first slide's photos
-  const first = pptx.addSlide();
-  first.background = { color: COLORS.paper };
-  phaseHeader(first, phase, color, showFr ? frText : '');
+  const s = pptx.addSlide();
+  s.background = { color: COLORS.paper };
+  phaseHeader(s, phase, color, showFr ? frText : '', slideNo ? ` (slide ${slideNo})` : '');
 
-  first.addText('Observations', {
+  s.addText('Observations', {
     x: 0.5,
     y: 1.25,
     w: 4.0,
@@ -426,8 +444,8 @@ function buildPhaseSlides(
   });
 
   const obsRuns: PptxGenJS.TextProps[] =
-    phase.observations.length > 0
-      ? phase.observations.map((o) => {
+    slideData.observations.length > 0
+      ? slideData.observations.map((o) => {
           const pal = RISK_PALETTE[colorOf(o)];
           return {
             text: `${obsPrefix(o, units)}${o.text || pal.label}`,
@@ -446,7 +464,7 @@ function buildPhaseSlides(
             options: { color: COLORS.muted, italic: true, fontSize: FONT.body },
           },
         ];
-  first.addText(obsRuns, {
+  s.addText(obsRuns, {
     x: 0.5,
     y: 1.6,
     w: 4.0,
@@ -455,9 +473,8 @@ function buildPhaseSlides(
     valign: 'top',
   });
 
-  const firstPhotos = encodedSlides[0] ?? [];
-  if (firstPhotos.length === 0) {
-    first.addText('No photos on this slide', {
+  if (photos.length === 0) {
+    s.addText('No photos on this slide', {
       x: 4.8,
       y: 3.4,
       w: 8.0,
@@ -469,20 +486,9 @@ function buildPhaseSlides(
       fontSize: FONT.body,
     });
   } else {
-    placePhotoGrid(first, firstPhotos, 4.8, 1.3, 8.03, 5.4);
+    placePhotoGrid(s, photos, 4.8, 1.3, 8.03, 5.4);
   }
-  footer(first, `${phase.title} — slide 1`);
-
-  // Continuation slides: one per remaining photo slide
-  for (let i = 1; i < encodedSlides.length; i++) {
-    const photos = encodedSlides[i];
-    if (photos.length === 0) continue;
-    const cont = pptx.addSlide();
-    cont.background = { color: COLORS.paper };
-    phaseHeader(cont, phase, color, showFr ? frText : '', ` (slide ${i + 1})`);
-    placePhotoGrid(cont, photos, 0.5, 1.3, 12.33, 5.4);
-    footer(cont, `${phase.title} — slide ${i + 1}`);
-  }
+  footer(s, slideNo ? `${phase.title} — slide ${slideNo}` : phase.title);
 }
 
 /* -------------------------------- helpers -------------------------------- */
@@ -491,7 +497,7 @@ function worstColor(ins: Inspection) {
   const order = ['good', 'discuss', 'low', 'medium', 'high'] as const;
   let worst: (typeof order)[number] = 'good';
   for (const phase of ins.phases) {
-    const c = aggregateColor(phase.observations);
+    const c = aggregateColor(phaseObservations(phase));
     if (!c || c === 'waived') continue;
     if (order.indexOf(c) > order.indexOf(worst)) worst = c;
   }

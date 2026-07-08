@@ -5,6 +5,7 @@ import type {
   Observation,
   Phase,
   PhotoRef,
+  PhotoSlide,
   RiskSeverity,
 } from '@/types';
 import { PHASE_TEMPLATES } from '@/config/phases';
@@ -12,16 +13,12 @@ import { PHOTOS_PER_SLIDE, boxType } from '@/config/options';
 
 type Stage = 'setup' | 'capture';
 
-function newSlide() {
-  return { id: nanoid(), photos: [] as PhotoRef[] };
+function newSlide(): PhotoSlide {
+  return { id: nanoid(), photos: [], observations: [] };
 }
 
 function buildPhases(): Phase[] {
-  return PHASE_TEMPLATES.map((t) => ({
-    ...t,
-    slides: [newSlide()],
-    observations: [],
-  }));
+  return PHASE_TEMPLATES.map((t) => ({ ...t, slides: [newSlide()] }));
 }
 
 function makeEmptyMeta(): InspectionMeta {
@@ -52,9 +49,11 @@ interface InspectionState {
   resetInspection: () => void;
   setActivePhase: (id: string) => void;
 
-  // photo slides
+  // slides
   addSlide: (phaseId: string) => void;
   removeSlide: (phaseId: string, slideId: string) => void;
+
+  // photos (scoped to a slide)
   addPhotos: (phaseId: string, slideId: string, files: File[]) => void;
   removePhoto: (phaseId: string, slideId: string, photoId: string) => void;
   reorderPhotos: (
@@ -64,14 +63,29 @@ interface InspectionState {
     toIndex: number,
   ) => void;
 
-  // observations
-  addObservation: (phaseId: string, risk?: RiskSeverity) => void;
+  // observations (scoped to a slide)
+  addObservation: (phaseId: string, slideId: string, risk?: RiskSeverity) => void;
   updateObservation: (
     phaseId: string,
+    slideId: string,
     obsId: string,
     patch: Partial<Observation>,
   ) => void;
-  removeObservation: (phaseId: string, obsId: string) => void;
+  removeObservation: (phaseId: string, slideId: string, obsId: string) => void;
+}
+
+/** Helper: map over a specific phase's slides. */
+function updateSlide(
+  phases: Phase[],
+  phaseId: string,
+  slideId: string,
+  fn: (slide: PhotoSlide) => PhotoSlide,
+): Phase[] {
+  return phases.map((p) =>
+    p.id === phaseId
+      ? { ...p, slides: p.slides.map((s) => (s.id === slideId ? fn(s) : s)) }
+      : p,
+  );
 }
 
 export const useInspection = create<InspectionState>((set) => ({
@@ -91,12 +105,7 @@ export const useInspection = create<InspectionState>((set) => ({
   resetInspection: () =>
     set(() => {
       const phases = buildPhases();
-      return {
-        stage: 'setup',
-        meta: makeEmptyMeta(),
-        phases,
-        activePhaseId: null,
-      };
+      return { stage: 'setup', meta: makeEmptyMeta(), phases, activePhaseId: null };
     }),
 
   setActivePhase: (id) => set(() => ({ activePhaseId: id })),
@@ -112,14 +121,12 @@ export const useInspection = create<InspectionState>((set) => ({
     set((s) => ({
       phases: s.phases.map((p) => {
         if (p.id !== phaseId) return p;
-        if (p.slides.length <= 1) {
-          // keep at least one slide — just clear it
-          const only = p.slides[0];
-          only.photos.forEach((ph) => URL.revokeObjectURL(ph.url));
-          return { ...p, slides: [newSlide()] };
-        }
         const target = p.slides.find((sl) => sl.id === slideId);
         target?.photos.forEach((ph) => URL.revokeObjectURL(ph.url));
+        if (p.slides.length <= 1) {
+          // keep at least one slide — replace with a fresh empty one
+          return { ...p, slides: [newSlide()] };
+        }
         return { ...p, slides: p.slides.filter((sl) => sl.id !== slideId) };
       }),
     })),
@@ -129,99 +136,74 @@ export const useInspection = create<InspectionState>((set) => ({
       const images = files.filter((f) => IMAGE_TYPES.test(f.type));
       if (images.length === 0) return s;
       return {
-        phases: s.phases.map((p) => {
-          if (p.id !== phaseId) return p;
-          return {
-            ...p,
-            slides: p.slides.map((sl) => {
-              if (sl.id !== slideId) return sl;
-              const capacity = PHOTOS_PER_SLIDE - sl.photos.length;
-              if (capacity <= 0) return sl;
-              const toAdd: PhotoRef[] = images.slice(0, capacity).map((file) => ({
-                id: nanoid(),
-                name: file.name,
-                url: URL.createObjectURL(file),
-                type: file.type,
-                size: file.size,
-                file,
-              }));
-              return { ...sl, photos: [...sl.photos, ...toAdd] };
-            }),
-          };
+        phases: updateSlide(s.phases, phaseId, slideId, (sl) => {
+          const capacity = PHOTOS_PER_SLIDE - sl.photos.length;
+          if (capacity <= 0) return sl;
+          const toAdd: PhotoRef[] = images.slice(0, capacity).map((file) => ({
+            id: nanoid(),
+            name: file.name,
+            url: URL.createObjectURL(file),
+            type: file.type,
+            size: file.size,
+            file,
+          }));
+          return { ...sl, photos: [...sl.photos, ...toAdd] };
         }),
       };
     }),
 
   removePhoto: (phaseId, slideId, photoId) =>
     set((s) => ({
-      phases: s.phases.map((p) => {
-        if (p.id !== phaseId) return p;
-        return {
-          ...p,
-          slides: p.slides.map((sl) => {
-            if (sl.id !== slideId) return sl;
-            const target = sl.photos.find((ph) => ph.id === photoId);
-            if (target) URL.revokeObjectURL(target.url);
-            return { ...sl, photos: sl.photos.filter((ph) => ph.id !== photoId) };
-          }),
-        };
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => {
+        const target = sl.photos.find((ph) => ph.id === photoId);
+        if (target) URL.revokeObjectURL(target.url);
+        return { ...sl, photos: sl.photos.filter((ph) => ph.id !== photoId) };
       }),
     })),
 
   reorderPhotos: (phaseId, slideId, fromIndex, toIndex) =>
     set((s) => ({
-      phases: s.phases.map((p) => {
-        if (p.id !== phaseId) return p;
-        return {
-          ...p,
-          slides: p.slides.map((sl) => {
-            if (sl.id !== slideId) return sl;
-            const next = [...sl.photos];
-            const [moved] = next.splice(fromIndex, 1);
-            if (!moved) return sl;
-            next.splice(toIndex, 0, moved);
-            return { ...sl, photos: next };
-          }),
-        };
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => {
+        const next = [...sl.photos];
+        const [moved] = next.splice(fromIndex, 1);
+        if (!moved) return sl;
+        next.splice(toIndex, 0, moved);
+        return { ...sl, photos: next };
       }),
     })),
 
-  addObservation: (phaseId, risk = 'good') =>
-    set((s) => {
-      const obs: Observation = {
-        id: nanoid(),
-        text: '',
-        risk,
-        status: 'normal',
-        affectedSamples: risk === 'good' ? 0 : 1,
-      };
-      return {
-        phases: s.phases.map((p) =>
-          p.id === phaseId ? { ...p, observations: [...p.observations, obs] } : p,
-        ),
-      };
-    }),
-
-  updateObservation: (phaseId, obsId, patch) =>
+  addObservation: (phaseId, slideId, risk = 'good') =>
     set((s) => ({
-      phases: s.phases.map((p) =>
-        p.id === phaseId
-          ? {
-              ...p,
-              observations: p.observations.map((o) =>
-                o.id === obsId ? { ...o, ...patch } : o,
-              ),
-            }
-          : p,
-      ),
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => ({
+        ...sl,
+        observations: [
+          ...sl.observations,
+          {
+            id: nanoid(),
+            text: '',
+            risk,
+            status: 'normal',
+            affectedSamples: risk === 'good' ? 0 : 1,
+          } satisfies Observation,
+        ],
+      })),
     })),
 
-  removeObservation: (phaseId, obsId) =>
+  updateObservation: (phaseId, slideId, obsId, patch) =>
     set((s) => ({
-      phases: s.phases.map((p) =>
-        p.id === phaseId
-          ? { ...p, observations: p.observations.filter((o) => o.id !== obsId) }
-          : p,
-      ),
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => ({
+        ...sl,
+        observations: sl.observations.map((o) =>
+          o.id === obsId ? { ...o, ...patch } : o,
+        ),
+      })),
+    })),
+
+  removeObservation: (phaseId, slideId, obsId) =>
+    set((s) => ({
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => ({
+        ...sl,
+        observations: sl.observations.filter((o) => o.id !== obsId),
+      })),
     })),
 }));

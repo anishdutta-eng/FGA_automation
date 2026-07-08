@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useInspection } from '@/store/useInspection';
-import { aggregateColor, phasePhotoCount, totalUnits } from '@/lib/fr';
+import { aggregateColor, phaseObservations, phasePhotoCount, totalUnits } from '@/lib/fr';
 import type { ProgressInfo } from '@/lib/report/buildDeck';
 import { downloadRecord } from '@/lib/report/buildRecord';
 import type { Inspection } from '@/types';
@@ -22,9 +22,9 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
   const inspection: Inspection = { ...meta, phases };
   const photoCount = phases.reduce((n, p) => n + phasePhotoCount(p), 0);
   const documentedPhases = phases.filter(
-    (p) => phasePhotoCount(p) > 0 || p.observations.length > 0,
+    (p) => phasePhotoCount(p) > 0 || phaseObservations(p).length > 0,
   ).length;
-  const anyFail = phases.some((p) => aggregateColor(p.observations) === 'high');
+  const anyFail = phases.some((p) => aggregateColor(phaseObservations(p)) === 'high');
 
   const handleDeck = async () => {
     setStatus('building');

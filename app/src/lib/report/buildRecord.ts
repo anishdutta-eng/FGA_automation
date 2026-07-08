@@ -4,6 +4,7 @@ import {
   observationFr,
   aggregateColor,
   colorOf,
+  phaseObservations,
   totalUnits,
   phasePhotoCount,
   deckDisplayName,
@@ -39,17 +40,20 @@ export interface InspectionRecord {
     color: string | null;
     fr: { failed: number; trials: number; ratio: number; label: string; percent: string };
     photoCount: number;
-    slides: Array<{ index: number; photos: Array<{ name: string; type: string; size: number }> }>;
-    observations: Array<{
-      text: string;
-      risk: string;
-      status: string;
-      color: string;
-      affectedSamples: number;
-      fr: { label: string; percent: string };
-      failureMode?: string;
-      nextSteps?: string;
-      dri?: string;
+    slides: Array<{
+      index: number;
+      photos: Array<{ name: string; type: string; size: number }>;
+      observations: Array<{
+        text: string;
+        risk: string;
+        status: string;
+        color: string;
+        affectedSamples: number;
+        fr: { label: string; percent: string };
+        failureMode?: string;
+        nextSteps?: string;
+        dri?: string;
+      }>;
     }>;
   }>;
 }
@@ -57,7 +61,7 @@ export interface InspectionRecord {
 export function buildRecord(ins: Inspection): InspectionRecord {
   const units = totalUnits(ins);
   const worst = ins.phases
-    .map((p) => aggregateColor(p.observations))
+    .map((p) => aggregateColor(phaseObservations(p)))
     .filter(Boolean) as string[];
 
   return {
@@ -89,27 +93,27 @@ export function buildRecord(ins: Inspection): InspectionRecord {
       id: phase.id,
       title: phase.title,
       slideOrder: phase.slideOrder,
-      color: aggregateColor(phase.observations),
+      color: aggregateColor(phaseObservations(phase)),
       fr: phaseFr(phase, units),
       photoCount: phasePhotoCount(phase),
       slides: phase.slides.map((s, i) => ({
         index: i + 1,
         photos: s.photos.map((ph) => ({ name: ph.name, type: ph.type, size: ph.size })),
+        observations: s.observations.map((o) => {
+          const ofr = observationFr(o, units);
+          return {
+            text: o.text,
+            risk: o.risk,
+            status: o.status,
+            color: colorOf(o),
+            affectedSamples: o.affectedSamples,
+            fr: { label: ofr.label, percent: ofr.percent },
+            failureMode: o.failureMode,
+            nextSteps: o.nextSteps,
+            dri: o.dri,
+          };
+        }),
       })),
-      observations: phase.observations.map((o) => {
-        const ofr = observationFr(o, units);
-        return {
-          text: o.text,
-          risk: o.risk,
-          status: o.status,
-          color: colorOf(o),
-          affectedSamples: o.affectedSamples,
-          fr: { label: ofr.label, percent: ofr.percent },
-          failureMode: o.failureMode,
-          nextSteps: o.nextSteps,
-          dri: o.dri,
-        };
-      }),
     })),
   };
 }

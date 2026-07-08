@@ -51,21 +51,31 @@ export function phasePhotoCount(phase: Phase): number {
   return phase.slides.reduce((n, s) => n + s.photos.length, 0);
 }
 
+/** All observations across a phase's slides. */
+export function phaseObservations(phase: Phase): Observation[] {
+  return phase.slides.flatMap((s) => s.observations);
+}
+
 /**
  * A phase is "complete" once it has at least one photo and one observation.
  */
 export function isPhaseComplete(phase: Phase): boolean {
-  return phasePhotoCount(phase) > 0 && phase.observations.length > 0;
+  return phasePhotoCount(phase) > 0 && phaseObservations(phase).length > 0;
 }
 
-/** Aggregate FR for a phase: affected units across non-waived observations. */
-export function phaseFr(phase: Phase, units: number): FrResult {
-  const failed = phase.observations.reduce(
+/** Aggregate FR across a set of observations. */
+export function observationsFr(observations: Observation[], units: number): FrResult {
+  const failed = observations.reduce(
     (sum, o) =>
       sum + (o.status === 'waived' || o.risk === 'good' ? 0 : o.affectedSamples),
     0,
   );
   return computeFr(failed, units);
+}
+
+/** Aggregate FR for a phase: affected units across non-waived observations. */
+export function phaseFr(phase: Phase, units: number): FrResult {
+  return observationsFr(phaseObservations(phase), units);
 }
 
 /** The display color for a single observation (status overrides severity). */

@@ -36,10 +36,14 @@ export interface PhotoRef {
   file: File;
 }
 
-/** A single deck slide's worth of photos (max 4). */
+/**
+ * A single deck slide: up to 4 photos plus the observations recorded for that
+ * slide. Each photo slide carries its own observations so they export together.
+ */
 export interface PhotoSlide {
   id: string;
   photos: PhotoRef[];
+  observations: Observation[];
 }
 
 export interface Observation {
@@ -60,9 +64,8 @@ export interface Phase {
   guidance: string;
   slideOrder: number;
   required: boolean;
-  /** One or more photo slides (each up to 4 photos). Always at least one. */
+  /** One or more slides, each with photos + observations. Always at least one. */
   slides: PhotoSlide[];
-  observations: Observation[];
 }
 
 export interface InspectionMeta {

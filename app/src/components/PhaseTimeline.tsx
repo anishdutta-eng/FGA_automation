@@ -1,5 +1,11 @@
 import type { Phase, ColorKey } from '@/types';
-import { aggregateColor, isPhaseComplete, phasePhotoCount, RISK_META } from '@/lib/fr';
+import {
+  aggregateColor,
+  isPhaseComplete,
+  phaseObservations,
+  phasePhotoCount,
+  RISK_META,
+} from '@/lib/fr';
 import { cn } from '@/lib/cn';
 
 interface PhaseTimelineProps {
@@ -65,7 +71,7 @@ export function PhaseTimeline({
       {phases.map((phase) => {
         const active = phase.id === activePhaseId;
         const complete = isPhaseComplete(phase);
-        const color = aggregateColor(phase.observations);
+        const color = aggregateColor(phaseObservations(phase));
         const count = phasePhotoCount(phase);
         return (
           <button

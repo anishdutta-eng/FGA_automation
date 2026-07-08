@@ -3,6 +3,7 @@ import { useInspection } from '@/store/useInspection';
 import {
   phaseFr,
   aggregateColor,
+  phaseObservations,
   phasePhotoCount,
   totalUnits,
   RISK_META,
@@ -30,9 +31,10 @@ export function PhasePanel({ phase }: PhasePanelProps) {
   const removeObservation = useInspection((s) => s.removeObservation);
 
   const units = totalUnits(meta);
-  const color = aggregateColor(phase.observations);
+  const observations = phaseObservations(phase);
+  const color = aggregateColor(observations);
   const fr = phaseFr(phase, units);
-  const showFr = phase.observations.some(
+  const showFr = observations.some(
     (o) => o.status !== 'waived' && o.risk !== 'good' && o.affectedSamples > 0,
   );
   const photoCount = phasePhotoCount(phase);
@@ -60,27 +62,26 @@ export function PhasePanel({ phase }: PhasePanelProps) {
         </p>
       </header>
 
-      {/* Photo slides */}
-      <section className="mb-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
-            Photos
-            <span className="ml-2 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-600">
-              {photoCount}
-            </span>
-          </h3>
-          <span className="text-xs text-ink-400">
-            {phase.slides.length} slide{phase.slides.length > 1 ? 's' : ''} · max{' '}
-            {PHOTOS_PER_SLIDE} photos each
+      {/* Slides: photos + observations per slide */}
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
+          Slides
+          <span className="ml-2 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-600">
+            {phase.slides.length}
           </span>
-        </div>
+        </h3>
+        <span className="text-xs text-ink-400">
+          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units} units
+        </span>
+      </div>
 
+      <div className="space-y-4">
         {phase.slides.map((slide, i) => {
           const full = slide.photos.length >= PHOTOS_PER_SLIDE;
           return (
-            <div key={slide.id} className="card p-4">
+            <div key={slide.id} className="card p-5">
               <div className="mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                <span className="flex items-center gap-2 text-sm font-bold text-ink-800">
                   Slide {i + 1}
                   <span
                     className={cn(
@@ -91,7 +92,9 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                     {slide.photos.length}/{PHOTOS_PER_SLIDE}
                   </span>
                 </span>
-                {(phase.slides.length > 1 || slide.photos.length > 0) && (
+                {(phase.slides.length > 1 ||
+                  slide.photos.length > 0 ||
+                  slide.observations.length > 0) && (
                   <button
                     type="button"
                     onClick={() => removeSlide(phase.id, slide.id)}
@@ -102,6 +105,7 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                 )}
               </div>
 
+              {/* Photos */}
               {slide.photos.length > 0 && (
                 <div className="mb-3">
                   <PhotoGrid
@@ -113,7 +117,6 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                   />
                 </div>
               )}
-
               {full ? (
                 <p className="rounded-xl bg-risk-goodSoft px-3 py-2 text-center text-xs font-medium text-risk-good">
                   Slide full — add another slide for more photos
@@ -124,67 +127,63 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                   compact={slide.photos.length > 0}
                 />
               )}
+
+              {/* Observations for this slide */}
+              <div className="mt-4 border-t border-ink-100 pt-4">
+                <h4 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  Observations
+                </h4>
+                <div className="space-y-2.5">
+                  {slide.observations.map((obs) => (
+                    <ObservationRow
+                      key={obs.id}
+                      observation={obs}
+                      units={units}
+                      onChange={(patch) =>
+                        updateObservation(phase.id, slide.id, obs.id, patch)
+                      }
+                      onRemove={() => removeObservation(phase.id, slide.id, obs.id)}
+                    />
+                  ))}
+                </div>
+                {slide.observations.length === 0 && (
+                  <p className="mb-3 rounded-xl bg-ink-50 px-4 py-4 text-center text-sm text-ink-400">
+                    No observations yet for this slide.
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(['good', 'low', 'medium', 'high'] as const).map((r) => {
+                    const rm = RISK_META[r];
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => addObservation(phase.id, slide.id, r)}
+                        className="inline-flex items-center gap-2 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold transition hover:shadow-card"
+                      >
+                        <span className={cn('h-2.5 w-2.5 rounded-full', rm.dot)} />
+                        {rm.label.split(' ')[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           );
         })}
+      </div>
 
-        <button
-          type="button"
-          onClick={() => addSlide(phase.id)}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 py-3 text-sm font-semibold text-ink-500 transition hover:border-brand-400 hover:bg-brand-50/40 hover:text-brand-700"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add photo slide
-        </button>
-      </section>
-
-      {/* Observations */}
-      <section className="card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
-            Observations
-          </h3>
-          <span className="text-xs text-ink-400">T = {units} units</span>
-        </div>
-
-        <div className="space-y-2.5">
-          {phase.observations.map((obs) => (
-            <ObservationRow
-              key={obs.id}
-              observation={obs}
-              units={units}
-              onChange={(patch) => updateObservation(phase.id, obs.id, patch)}
-              onRemove={() => removeObservation(phase.id, obs.id)}
-            />
-          ))}
-        </div>
-
-        {phase.observations.length === 0 && (
-          <p className="mb-4 rounded-xl bg-ink-50 px-4 py-6 text-center text-sm text-ink-400">
-            No observations yet. Add one and tag it by severity.
-          </p>
-        )}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(['good', 'low', 'medium', 'high'] as const).map((r) => {
-            const rm = RISK_META[r];
-            return (
-              <button
-                key={r}
-                type="button"
-                onClick={() => addObservation(phase.id, r)}
-                className="inline-flex items-center gap-2 rounded-xl border border-ink-200 px-3 py-2 text-sm font-semibold transition hover:shadow-card"
-              >
-                <span className={cn('h-2.5 w-2.5 rounded-full', rm.dot)} />
-                Add {rm.label.split(' ')[0].toLowerCase()}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      <button
+        type="button"
+        onClick={() => addSlide(phase.id)}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-200 py-3 text-sm font-semibold text-ink-500 transition hover:border-brand-400 hover:bg-brand-50/40 hover:text-brand-700"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Add slide
+      </button>
     </div>
   );
 }

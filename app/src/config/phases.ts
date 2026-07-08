@@ -3,9 +3,8 @@ import type { Phase } from '@/types';
 /**
  * Canonical inspection phase list, seeded from the reference FGA deck.
  *
- * This is intentionally config-driven: reordering, adding, or removing a phase
- * here changes both the capture workflow and the generated slide deck 1:1,
- * without touching component code.
+ * Config-driven: reordering, adding, or removing a phase here changes both the
+ * capture workflow and the generated slide deck 1:1, without touching code.
  */
 export type PhaseTemplate = Pick<
   Phase,
@@ -22,18 +21,18 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
-    id: 'external-sku',
-    title: 'External SKU',
-    guidance:
-      'Unbox the case pack and photograph the packed SKU on all sides. Look for scratches, fractures, dirt, oil, and marks.',
-    slideOrder: 2,
-    required: true,
-  },
-  {
     id: 'external-retail-box',
     title: 'External Retail Box',
     guidance:
       'Photograph the retail box exterior, all faces. Verify print quality, artwork alignment, and seals.',
+    slideOrder: 2,
+    required: true,
+  },
+  {
+    id: 'artwork-validation',
+    title: 'Artwork Validation',
+    guidance:
+      'Validate printed artwork against the approved reference: logos, legal marks, text, colors, barcodes, and placement.',
     slideOrder: 3,
     required: true,
   },
@@ -46,19 +45,11 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
-    id: 'internal-box',
-    title: 'Internal Box',
-    guidance:
-      'Open the retail box and photograph the interior with the device still packed. Check for dirt, scratches, and fractures.',
-    slideOrder: 5,
-    required: true,
-  },
-  {
     id: 'internal-sku-box',
-    title: 'Internal SKU Box',
+    title: 'Internal SKU Box tray',
     guidance:
-      'Photograph the inner SKU packaging and how the device is seated. Verify fit and protective materials.',
-    slideOrder: 6,
+      'Photograph the inner SKU packaging and tray, and how the device is seated. Verify fit and protective materials.',
+    slideOrder: 5,
     required: true,
   },
   {
@@ -66,7 +57,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Device Inspection',
     guidance:
       'Remove the device and inspect it. Confirm the "Not For Sale" label is attached, and check for surface cracks, fractures, and dirt.',
-    slideOrder: 7,
+    slideOrder: 6,
     required: true,
   },
   {
@@ -74,7 +65,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Packing Tray',
     guidance:
       'Photograph the packing tray. Verify structure, fit, and absence of damage.',
-    slideOrder: 8,
+    slideOrder: 7,
     required: true,
   },
   {
@@ -82,7 +73,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Accessories (PSU, Ethernet, Clamps, WSL)',
     guidance:
       'Inspect and photograph all accessories: PSU, ethernet cables, clamps, and WSL. Check completeness and condition.',
-    slideOrder: 9,
+    slideOrder: 8,
     required: true,
   },
   {
@@ -90,7 +81,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'QR Codes',
     guidance:
       'Verify all QR codes are present and scannable. Capture a photo of each and note scan results.',
-    slideOrder: 10,
+    slideOrder: 9,
     required: true,
   },
   {
@@ -98,7 +89,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Warranty, Safety & Legal Documents',
     guidance:
       'Confirm the correct Warranty, Safety, and Legal documents are packed for the SKU-to-country mapping.',
-    slideOrder: 11,
+    slideOrder: 10,
     required: true,
   },
   {
@@ -106,7 +97,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Power-On Test',
     guidance:
       'Confirm the device powers on. Photograph the LED/boot state and note the result.',
-    slideOrder: 12,
+    slideOrder: 11,
     required: true,
   },
 ];

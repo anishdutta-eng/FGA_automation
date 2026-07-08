@@ -6,7 +6,13 @@ import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
 import { GenerateModal } from './GenerateModal';
 import { Wordmark } from './Wordmark';
-import { aggregateColor, isPhaseComplete, totalUnits } from '@/lib/fr';
+import {
+  aggregateColor,
+  isPhaseComplete,
+  phaseObservations,
+  phasePhotoCount,
+  totalUnits,
+} from '@/lib/fr';
 
 export function CaptureScreen() {
   const meta = useInspection((s) => s.meta);
@@ -20,10 +26,13 @@ export function CaptureScreen() {
 
   const requiredPhases = phases.filter((p) => p.required);
   const completed = requiredPhases.filter(isPhaseComplete).length;
-  const allRequiredDone = completed === requiredPhases.length;
+  // Report can be generated at any time, as long as there's something to show.
+  const hasContent = phases.some(
+    (p) => phasePhotoCount(p) > 0 || phaseObservations(p).length > 0,
+  );
 
   const anyFail = useMemo(
-    () => phases.some((p) => aggregateColor(p.observations) === 'high'),
+    () => phases.some((p) => aggregateColor(phaseObservations(p)) === 'high'),
     [phases],
   );
 
@@ -56,13 +65,13 @@ export function CaptureScreen() {
             </button>
             <button
               type="button"
-              disabled={!allRequiredDone}
+              disabled={!hasContent}
               onClick={() => setShowGenerate(true)}
               className="btn-primary"
               title={
-                allRequiredDone
+                hasContent
                   ? 'Generate the report'
-                  : 'Complete all required phases (photos + observations) first'
+                  : 'Add at least one photo or observation first'
               }
             >
               Generate Report
