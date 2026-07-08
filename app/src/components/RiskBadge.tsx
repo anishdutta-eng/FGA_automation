@@ -1,19 +1,19 @@
-import type { RiskLevel } from '@/types';
+import type { ColorKey } from '@/types';
 import { RISK_META } from '@/lib/fr';
 import { cn } from '@/lib/cn';
 
 interface RiskDotProps {
-  risk: RiskLevel | null;
+  color: ColorKey | null;
   className?: string;
 }
 
-/** A small status dot; grey when risk is null (empty phase). */
-export function RiskDot({ risk, className }: RiskDotProps) {
+/** A small status dot; grey-hollow when color is null (empty phase). */
+export function RiskDot({ color, className }: RiskDotProps) {
   return (
     <span
       className={cn(
         'inline-block h-2.5 w-2.5 rounded-full',
-        risk ? RISK_META[risk].dot : 'bg-ink-300',
+        color ? RISK_META[color].dot : 'bg-ink-300',
         className,
       )}
     />
@@ -21,12 +21,12 @@ export function RiskDot({ risk, className }: RiskDotProps) {
 }
 
 interface RiskBadgeProps {
-  risk: RiskLevel;
+  color: ColorKey;
   className?: string;
 }
 
-export function RiskBadge({ risk, className }: RiskBadgeProps) {
-  const meta = RISK_META[risk];
+export function RiskBadge({ color, className }: RiskBadgeProps) {
+  const meta = RISK_META[color];
   return (
     <span
       className={cn(

@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import type { InspectionMeta } from '@/types';
 import { useInspection } from '@/store/useInspection';
-
-const FIELD_HINTS: Record<string, string> = {
-  fgaJira: 'e.g. FGA-1234',
-  sku: 'e.g. 860-00181',
-  productName: 'e.g. Snowbird / Goldfinch',
-  dri: 'e.g. @JC',
-  region: 'e.g. EU / NA',
-};
+import {
+  BOX_TYPES,
+  PHASE_GATES,
+  boxType,
+  type BoxTypeId,
+  type PhaseGateId,
+} from '@/config/options';
+import { totalUnits, deckDisplayName } from '@/lib/fr';
+import { cn } from '@/lib/cn';
 
 export function SetupScreen() {
   const startInspection = useInspection((s) => s.startInspection);
@@ -18,26 +19,33 @@ export function SetupScreen() {
     productName: '',
     date: new Date().toISOString().slice(0, 10),
     dri: '',
+    boxType: 'pk1',
+    phaseGate: 'EVT',
+    countryCode: '',
+    unitsPerPack: boxType('pk1').unitsPerPack,
     sampleCount: 1,
-    region: '',
   });
 
+  const set = (patch: Partial<InspectionMeta>) => setMeta((m) => ({ ...m, ...patch }));
+
+  const setBox = (id: BoxTypeId) =>
+    set({ boxType: id, unitsPerPack: boxType(id).unitsPerPack });
+
+  const T = totalUnits(meta);
   const canStart =
     meta.fgaJira.trim() !== '' &&
     meta.sku.trim() !== '' &&
     meta.productName.trim() !== '' &&
-    meta.sampleCount >= 1;
-
-  const set = (patch: Partial<InspectionMeta>) =>
-    setMeta((m) => ({ ...m, ...patch }));
+    meta.sampleCount >= 1 &&
+    meta.unitsPerPack >= 1;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-ink-50 to-ink-100 p-6">
-      <div className="w-full max-w-xl animate-fade-in">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-ink-100 p-6">
+      <div className="w-full max-w-2xl animate-fade-in">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-900 shadow-lift">
-            <span className="h-5 w-5 rounded-full border-[3px] border-brand-400">
-              <span className="block h-full w-full scale-[0.35] rounded-full bg-risk-good" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-lift">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border-[3px] border-white/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
             </span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-ink-900">
@@ -56,90 +64,164 @@ export function SetupScreen() {
           }}
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label">FGA JIRA</label>
+            <Field label="FGA JIRA">
               <input
                 className="input"
-                placeholder={FIELD_HINTS.fgaJira}
+                placeholder="e.g. FGA-1234"
                 value={meta.fgaJira}
                 onChange={(e) => set({ fgaJira: e.target.value })}
               />
-            </div>
-            <div>
-              <label className="label">SKU</label>
+            </Field>
+            <Field label="SKU">
               <input
                 className="input"
-                placeholder={FIELD_HINTS.sku}
+                placeholder="e.g. 860-00181"
                 value={meta.sku}
                 onChange={(e) => set({ sku: e.target.value })}
               />
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className="label">eero Product Name</label>
+          <Field label="eero Product Name">
             <input
               className="input"
-              placeholder={FIELD_HINTS.productName}
+              placeholder="e.g. Snowbird / Goldfinch"
               value={meta.productName}
               onChange={(e) => set({ productName: e.target.value })}
             />
-          </div>
+          </Field>
+
+          {/* Box type */}
+          <Field label="Box type">
+            <div className="flex flex-wrap gap-2">
+              {BOX_TYPES.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setBox(b.id)}
+                  className={cn(
+                    'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                    meta.boxType === b.id
+                      ? 'border-brand-600 bg-brand-600 text-white shadow-card'
+                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300',
+                  )}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* Phase gate */}
+          <Field label="Phase gate">
+            <div className="flex flex-wrap gap-2">
+              {PHASE_GATES.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => set({ phaseGate: g.id as PhaseGateId })}
+                  className={cn(
+                    'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                    meta.phaseGate === g.id
+                      ? 'border-brand-600 bg-brand-600 text-white shadow-card'
+                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300',
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </Field>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="label">Date</label>
+            <Field label="Country code">
+              <input
+                className="input"
+                placeholder="e.g. US / EU / JP"
+                value={meta.countryCode}
+                onChange={(e) => set({ countryCode: e.target.value.toUpperCase() })}
+              />
+            </Field>
+            <Field label="DRI">
+              <input
+                className="input"
+                placeholder="e.g. @JC"
+                value={meta.dri}
+                onChange={(e) => set({ dri: e.target.value })}
+              />
+            </Field>
+            <Field label="Date">
               <input
                 type="date"
                 className="input"
                 value={meta.date}
                 onChange={(e) => set({ date: e.target.value })}
               />
-            </div>
-            <div>
-              <label className="label">DRI</label>
-              <input
-                className="input"
-                placeholder={FIELD_HINTS.dri}
-                value={meta.dri}
-                onChange={(e) => set({ dri: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="label">Region</label>
-              <input
-                className="input"
-                placeholder={FIELD_HINTS.region}
-                value={meta.region}
-                onChange={(e) => set({ region: e.target.value })}
-              />
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className="label">Samples inspected (T)</label>
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              className="input"
-              value={meta.sampleCount === 0 ? '' : meta.sampleCount}
-              onChange={(e) => {
-                const raw = e.target.value;
-                set({
-                  sampleCount:
-                    raw === '' ? 0 : Math.max(0, Math.floor(Number(raw) || 0)),
-                });
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '' || Number(e.target.value) < 1) {
-                  set({ sampleCount: 1 });
-                }
-              }}
-            />
-            <p className="mt-1.5 text-xs text-ink-400">
-              Failure Rate is computed as failed samples ÷ this count.
-            </p>
+          {/* Sampling */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Units per pack">
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                className="input"
+                value={meta.unitsPerPack === 0 ? '' : meta.unitsPerPack}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  set({
+                    unitsPerPack:
+                      raw === '' ? 0 : Math.max(0, Math.floor(Number(raw) || 0)),
+                  });
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '' || Number(e.target.value) < 1) {
+                    set({ unitsPerPack: 1 });
+                  }
+                }}
+              />
+            </Field>
+            <Field label="Samples (boxes) inspected">
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                className="input"
+                value={meta.sampleCount === 0 ? '' : meta.sampleCount}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  set({
+                    sampleCount:
+                      raw === '' ? 0 : Math.max(0, Math.floor(Number(raw) || 0)),
+                  });
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '' || Number(e.target.value) < 1) {
+                    set({ sampleCount: 1 });
+                  }
+                }}
+              />
+            </Field>
+          </div>
+
+          {/* Derived total + name preview */}
+          <div className="rounded-xl bg-brand-50 px-4 py-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-ink-600">
+                Total inspected units (T)
+              </span>
+              <span className="font-mono text-base font-bold text-brand-700">
+                {meta.unitsPerPack} × {meta.sampleCount} = {T}
+              </span>
+            </div>
+            <div className="mt-2 truncate border-t border-brand-100 pt-2 text-xs text-ink-500">
+              Deck name:{' '}
+              <span className="font-medium text-ink-700">
+                {deckDisplayName(meta, boxType(meta.boxType).fileLabel)}
+              </span>
+            </div>
           </div>
 
           <button type="submit" className="btn-primary w-full" disabled={!canStart}>
@@ -147,6 +229,21 @@ export function SetupScreen() {
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      {children}
     </div>
   );
 }

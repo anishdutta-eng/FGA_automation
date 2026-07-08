@@ -56,7 +56,7 @@ export function PhotoGrid({ photos, onRemove, onReorder }: PhotoGridProps) {
                 e.stopPropagation();
                 onRemove(photo.id);
               }}
-              className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink-950/60 text-white opacity-0 backdrop-blur transition hover:bg-risk-fail group-hover:opacity-100"
+              className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink-950/60 text-white opacity-0 backdrop-blur transition hover:bg-risk-high group-hover:opacity-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" />

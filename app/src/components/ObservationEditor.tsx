@@ -1,41 +1,45 @@
-import type { Observation, RiskLevel } from '@/types';
-import { RISK_META, computeFr } from '@/lib/fr';
+import type { Observation, RiskSeverity } from '@/types';
+import { RISK_META, observationFr, colorOf } from '@/lib/fr';
 import { cn } from '@/lib/cn';
 
 interface ObservationRowProps {
   observation: Observation;
-  sampleCount: number;
+  units: number;
   onChange: (patch: Partial<Observation>) => void;
   onRemove: () => void;
 }
 
-const RISK_ORDER: RiskLevel[] = ['good', 'low', 'fail'];
+const SEVERITIES: RiskSeverity[] = ['good', 'low', 'medium', 'high'];
 
 export function ObservationRow({
   observation,
-  sampleCount,
+  units,
   onChange,
   onRemove,
 }: ObservationRowProps) {
-  const meta = RISK_META[observation.risk];
-  const isFail = observation.risk === 'fail';
-  const fr = computeFr(observation.failedSamples, sampleCount);
+  const color = colorOf(observation);
+  const meta = RISK_META[color];
+  const isGood = observation.risk === 'good';
+  const fr = observationFr(observation, units);
   const waived = observation.status === 'waived';
+  const discuss = observation.status === 'discuss';
+
+  const toggleStatus = (status: 'waived' | 'discuss') =>
+    onChange({ status: observation.status === status ? 'normal' : status });
 
   return (
     <div
       className={cn(
-        'rounded-xl border-l-4 bg-white p-3 shadow-card transition',
-        waived ? 'border-l-ink-300 opacity-70' : meta.border,
-        'border-y border-r border-ink-200',
+        'rounded-xl border-l-4 border-y border-r border-ink-200 bg-white p-3 shadow-card transition',
+        meta.border,
       )}
     >
       <div className="flex items-start gap-3">
-        {/* Risk selector */}
+        {/* Severity selector */}
         <div className="flex shrink-0 rounded-lg border border-ink-200 p-0.5">
-          {RISK_ORDER.map((r) => {
+          {SEVERITIES.map((r) => {
             const rm = RISK_META[r];
-            const active = observation.risk === r;
+            const active = observation.risk === r && !waived && !discuss;
             return (
               <button
                 key={r}
@@ -44,12 +48,13 @@ export function ObservationRow({
                 onClick={() =>
                   onChange({
                     risk: r,
-                    failedSamples:
-                      r === 'fail' && observation.failedSamples === 0
-                        ? 1
-                        : r !== 'fail'
-                          ? 0
-                          : observation.failedSamples,
+                    status: 'normal',
+                    affectedSamples:
+                      r === 'good'
+                        ? 0
+                        : observation.affectedSamples === 0
+                          ? 1
+                          : observation.affectedSamples,
                   })
                 }
                 className={cn(
@@ -68,11 +73,7 @@ export function ObservationRow({
           value={observation.text}
           onChange={(e) => onChange({ text: e.target.value })}
           placeholder={
-            isFail
-              ? 'Describe the failure observed…'
-              : observation.risk === 'low'
-                ? 'Describe the low-risk issue…'
-                : 'Note what looks good / was verified…'
+            isGood ? 'Note what was verified…' : 'Describe the issue observed…'
           }
           rows={2}
           className="input min-h-[2.75rem] flex-1 resize-y"
@@ -83,7 +84,7 @@ export function ObservationRow({
           type="button"
           aria-label="Remove observation"
           onClick={onRemove}
-          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-400 transition hover:bg-risk-failSoft hover:text-risk-fail"
+          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-400 transition hover:bg-risk-highSoft hover:text-risk-high"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <polyline points="3 6 5 6 21 6" />
@@ -92,25 +93,73 @@ export function ObservationRow({
         </button>
       </div>
 
-      {/* Failure detail row */}
-      {isFail && !waived && (
-        <div className="mt-3 grid gap-2 pl-[3.25rem] sm:grid-cols-[auto_1fr_1fr_auto]">
-          <label className="flex items-center gap-2 text-xs font-semibold text-ink-600">
-            Failed (F)
+      {/* Controls row */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 pl-[3.25rem]">
+        {/* Affected samples (hidden for good) */}
+        {!isGood && (
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-600">
+            Affected
             <input
               type="number"
               min={0}
-              max={sampleCount}
-              value={observation.failedSamples}
+              max={units}
+              value={observation.affectedSamples}
               onChange={(e) =>
-                onChange({ failedSamples: Number(e.target.value) })
+                onChange({
+                  affectedSamples: Math.max(
+                    0,
+                    Math.min(units, Math.floor(Number(e.target.value) || 0)),
+                  ),
+                })
               }
               className="input w-16 px-2 py-1.5 text-center"
             />
-            <span className="whitespace-nowrap rounded-md bg-risk-failSoft px-2 py-1 font-mono text-risk-fail">
-              FR {fr.label} · {fr.percent}
-            </span>
+            <span className="text-ink-400">/ {units}</span>
           </label>
+        )}
+
+        {/* FR — always shown */}
+        <span
+          className={cn(
+            'whitespace-nowrap rounded-md px-2 py-1 font-mono text-xs font-semibold',
+            meta.chip,
+          )}
+        >
+          FR {fr.label} · {fr.percent}
+        </span>
+
+        <div className="flex-1" />
+
+        {/* Status toggles */}
+        <button
+          type="button"
+          onClick={() => toggleStatus('waived')}
+          className={cn(
+            'rounded-md px-2.5 py-1 text-xs font-semibold transition',
+            waived
+              ? 'bg-risk-waivedSoft text-risk-waived'
+              : 'border border-ink-200 text-ink-500 hover:bg-ink-50',
+          )}
+        >
+          Waived
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleStatus('discuss')}
+          className={cn(
+            'rounded-md px-2.5 py-1 text-xs font-semibold transition',
+            discuss
+              ? 'bg-risk-discussSoft text-risk-discuss'
+              : 'border border-ink-200 text-ink-500 hover:bg-ink-50',
+          )}
+        >
+          Discuss
+        </button>
+      </div>
+
+      {/* Failure detail inputs for issues */}
+      {!isGood && (
+        <div className="mt-2 grid gap-2 pl-[3.25rem] sm:grid-cols-[1fr_1fr_auto]">
           <input
             value={observation.failureMode ?? ''}
             onChange={(e) => onChange({ failureMode: e.target.value })}
@@ -129,23 +178,6 @@ export function ObservationRow({
             placeholder="DRI"
             className="input w-24 px-2.5 py-1.5 text-xs"
           />
-        </div>
-      )}
-
-      {/* Waive toggle for issues */}
-      {observation.risk !== 'good' && (
-        <div className="mt-2 flex justify-end pl-[3.25rem]">
-          <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-500">
-            <input
-              type="checkbox"
-              checked={waived}
-              onChange={(e) =>
-                onChange({ status: e.target.checked ? 'waived' : 'normal' })
-              }
-              className="h-3.5 w-3.5 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-            />
-            Waived
-          </label>
         </div>
       )}
     </div>

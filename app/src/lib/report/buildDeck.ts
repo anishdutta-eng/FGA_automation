@@ -1,13 +1,23 @@
 import PptxGenJS from 'pptxgenjs';
-import type { Inspection, Observation, Phase, RiskLevel } from '@/types';
-import { phaseFr, aggregateRisk, computeFr } from '@/lib/fr';
+import type { Inspection, Observation, Phase } from '@/types';
+import {
+  phaseFr,
+  aggregateColor,
+  colorOf,
+  observationFr,
+  phasePhotoCount,
+  totalUnits,
+  deckDisplayName,
+} from '@/lib/fr';
+import { boxType } from '@/config/options';
 import {
   COLORS,
   CONFIDENTIAL,
   FONT,
   LAYOUT,
-  PHOTOS_PER_SLIDE,
+  LEGEND_ORDER,
   RISK_PALETTE,
+  TITLE,
 } from './theme';
 import { encodePhotos, fitContain, type EncodedPhoto } from './imageUtils';
 
@@ -16,39 +26,35 @@ export interface ProgressInfo {
   totalPhases: number;
   label: string;
 }
-
 type Progress = (info: ProgressInfo) => void;
 
 function sanitize(s: string): string {
   return s.replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '') || 'inspection';
 }
 
-/** Phases that carry any content worth putting in the deck. */
 function reportablePhases(phases: Phase[]): Phase[] {
-  return phases.filter((p) => p.photos.length > 0 || p.observations.length > 0);
+  return phases.filter((p) => phasePhotoCount(p) > 0 || p.observations.length > 0);
 }
 
-function obsPrefix(o: Observation, trials: number): string {
-  const parts: string[] = [];
-  if (o.status === 'waived') parts.push('[WAIVED]');
-  if (o.failedSamples > 0) {
-    const fr = computeFr(o.failedSamples, trials);
-    parts.push(`FR ${fr.label} · ${fr.percent}`);
-  }
-  return parts.length ? `${parts.join('  ')}  —  ` : '';
+function obsPrefix(o: Observation, units: number): string {
+  const fr = observationFr(o, units);
+  const tag =
+    o.status === 'waived' ? '[WAIVED]  ' : o.status === 'discuss' ? '[DISCUSS]  ' : '';
+  return `${tag}FR ${fr.label} · ${fr.percent}  —  `;
 }
 
-/** Build and download the inspection slide deck. */
 export async function generateDeck(
   inspection: Inspection,
   onProgress?: Progress,
 ): Promise<void> {
+  const units = totalUnits(inspection);
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: LAYOUT.name, width: LAYOUT.width, height: LAYOUT.height });
   pptx.layout = LAYOUT.name;
   pptx.author = inspection.dri || 'FGA Inspection Studio';
   pptx.company = 'eero';
-  pptx.title = `${inspection.productName} — ${inspection.sku}`;
+  const deckName = deckDisplayName(inspection, boxType(inspection.boxType).fileLabel);
+  pptx.title = deckName;
 
   const phases = reportablePhases(inspection.phases);
   const totalSteps = phases.length + 3;
@@ -57,82 +63,104 @@ export async function generateDeck(
     onProgress?.({ phase: ++step, totalPhases: totalSteps, label });
 
   tick('Building title slide');
-  buildTitleSlide(pptx, inspection);
+  buildTitleSlide(pptx, inspection, deckName);
 
   tick('Building summary');
   buildSummarySlide(pptx, inspection);
 
   tick('Building findings table');
-  buildFindingsTable(pptx, inspection);
+  buildFindingsTable(pptx, inspection, units);
 
   for (const phase of inspection.phases) {
-    if (phase.photos.length === 0 && phase.observations.length === 0) continue;
+    if (phasePhotoCount(phase) === 0 && phase.observations.length === 0) continue;
     tick(`Adding "${phase.title}"`);
-    const encoded = await encodePhotos(phase.photos);
-    buildPhaseSlides(pptx, inspection, phase, encoded);
+    const encodedSlides: EncodedPhoto[][] = [];
+    for (const s of phase.slides) {
+      encodedSlides.push(await encodePhotos(s.photos));
+    }
+    buildPhaseSlides(pptx, phase, encodedSlides, units);
   }
 
-  const fileName = `FGA_${sanitize(inspection.sku)}_${inspection.date}.pptx`;
-  await pptx.writeFile({ fileName });
+  await pptx.writeFile({ fileName: `${sanitize(deckName)}.pptx` });
 }
 
 /* ----------------------------- slide builders ---------------------------- */
 
-function buildTitleSlide(pptx: PptxGenJS, ins: Inspection) {
+function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
   const slide = pptx.addSlide();
-  slide.background = { color: COLORS.ink };
+  slide.background = { color: TITLE.bg };
 
-  // Accent bar
+  // Darker band on the left for depth
   slide.addShape('rect', {
     x: 0,
-    y: 3.05,
-    w: 1.4,
-    h: 0.08,
-    fill: { color: COLORS.brand },
+    y: 0,
+    w: LAYOUT.width,
+    h: 1.7,
+    fill: { color: TITLE.band },
     line: { type: 'none' },
+  });
+  slide.addShape('rect', {
+    x: 0.9,
+    y: 3.15,
+    w: 1.6,
+    h: 0.09,
+    fill: { color: TITLE.accent },
+    line: { type: 'none' },
+  });
+
+  slide.addText('FGA HARDWARE INSPECTION', {
+    x: 0.9,
+    y: 0.6,
+    w: 11.5,
+    h: 0.5,
+    fontFace: FONT.face,
+    fontSize: FONT.subheading,
+    bold: true,
+    color: TITLE.sub,
+    charSpacing: 2,
   });
 
   slide.addText(ins.productName || 'Inspection', {
     x: 0.9,
-    y: 2.2,
+    y: 2.25,
     w: 11.5,
     h: 0.9,
     fontFace: FONT.face,
     fontSize: FONT.title + 6,
     bold: true,
-    color: COLORS.white,
+    color: TITLE.text,
   });
 
   const sub = [
     ins.sku && `SKU ${ins.sku}`,
-    ins.region,
-    ins.fgaJira,
+    ins.phaseGate,
+    ins.countryCode,
+    boxType(ins.boxType).label,
   ]
     .filter(Boolean)
     .join('    ·    ');
-
   slide.addText(sub, {
     x: 0.9,
-    y: 3.25,
+    y: 3.4,
     w: 11.5,
     h: 0.5,
     fontFace: FONT.face,
     fontSize: FONT.heading,
-    color: 'BCD3FF',
+    color: TITLE.sub,
   });
 
   slide.addText(
     [
-      { text: 'Date  ', options: { color: COLORS.muted } },
-      { text: ins.date, options: { color: COLORS.white } },
-      { text: '        DRI  ', options: { color: COLORS.muted } },
-      { text: ins.dri || '—', options: { color: COLORS.white } },
-      { text: `        Samples inspected  `, options: { color: COLORS.muted } },
-      { text: String(ins.sampleCount), options: { color: COLORS.white } },
+      { text: 'Date  ', options: { color: TITLE.muted } },
+      { text: ins.date, options: { color: TITLE.text } },
+      { text: '        DRI  ', options: { color: TITLE.muted } },
+      { text: ins.dri || '—', options: { color: TITLE.text } },
+      { text: '        JIRA  ', options: { color: TITLE.muted } },
+      { text: ins.fgaJira || '—', options: { color: TITLE.text } },
     ],
     {
       x: 0.9,
-      y: 3.95,
+      y: 4.15,
       w: 11.5,
       h: 0.4,
       fontFace: FONT.face,
@@ -140,14 +168,23 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection) {
     },
   );
 
-  slide.addText(CONFIDENTIAL, {
+  slide.addText(deckName, {
     x: 0.9,
-    y: 6.9,
+    y: 6.5,
     w: 11.5,
     h: 0.3,
     fontFace: FONT.face,
     fontSize: FONT.small,
-    color: COLORS.muted,
+    color: TITLE.muted,
+  });
+  slide.addText(CONFIDENTIAL, {
+    x: 0.9,
+    y: 6.85,
+    w: 11.5,
+    h: 0.3,
+    fontFace: FONT.face,
+    fontSize: FONT.small,
+    color: TITLE.muted,
   });
 }
 
@@ -156,118 +193,112 @@ function buildSummarySlide(pptx: PptxGenJS, ins: Inspection) {
   slide.background = { color: COLORS.paper };
   slideHeading(slide, 'Inspection Summary');
 
-  // Left: metadata rows
   const meta: [string, string][] = [
     ['FGA JIRA', ins.fgaJira || '—'],
     ['SKU', ins.sku || '—'],
     ['Product', ins.productName || '—'],
-    ['Region', ins.region || '—'],
+    ['Phase gate', ins.phaseGate],
+    ['Country', ins.countryCode || '—'],
+    ['Box type', boxType(ins.boxType).label],
+    ['Units / pack', String(ins.unitsPerPack)],
+    ['Samples (boxes)', String(ins.sampleCount)],
+    ['Total units (T)', String(totalUnits(ins))],
     ['DRI', ins.dri || '—'],
-    ['Samples inspected (T)', String(ins.sampleCount)],
     ['Date', ins.date],
   ];
   slide.addTable(
     meta.map(([k, v]) => [
-      { text: k, options: { color: COLORS.muted, bold: true, fontSize: FONT.body } },
-      { text: v, options: { color: COLORS.ink, fontSize: FONT.body } },
+      { text: k, options: { color: COLORS.muted, bold: true, fontSize: FONT.small } },
+      { text: v, options: { color: COLORS.ink, fontSize: FONT.small } },
     ]),
     {
-      x: 0.9,
-      y: 1.5,
+      x: 0.6,
+      y: 1.45,
       w: 6.0,
       colW: [2.6, 3.4],
-      rowH: 0.42,
+      rowH: 0.34,
       fontFace: FONT.face,
       border: { type: 'solid', color: COLORS.line, pt: 1 },
-      align: 'left',
       valign: 'middle',
     },
   );
 
-  // Right: risk legend
+  // Risk legend (6 entries)
   slide.addText('Risk legend', {
-    x: 7.4,
-    y: 1.4,
-    w: 5.0,
+    x: 7.2,
+    y: 1.35,
+    w: 5.6,
     h: 0.4,
     fontFace: FONT.face,
     fontSize: FONT.subheading,
     bold: true,
     color: COLORS.inkSoft,
   });
-
-  (['good', 'low', 'fail'] as RiskLevel[]).forEach((r, i) => {
-    const p = RISK_PALETTE[r];
-    const y = 1.95 + i * 0.75;
+  LEGEND_ORDER.forEach((key, i) => {
+    const p = RISK_PALETTE[key];
+    const y = 1.85 + i * 0.62;
     slide.addShape('rect', {
-      x: 7.4,
+      x: 7.2,
       y,
-      w: 0.42,
-      h: 0.42,
+      w: 0.38,
+      h: 0.38,
       fill: { color: p.solid },
       line: { type: 'none' },
-      rectRadius: 0.06,
+      rectRadius: 0.05,
     });
     slide.addText(
       [
-        { text: `${p.label}`, options: { bold: true, color: COLORS.ink } },
-        {
-          text:
-            r === 'good'
-              ? '   Pass / verified'
-              : r === 'low'
-                ? '   Minor issue, ships'
-                : '   Failure, review before ship',
-          options: { color: COLORS.muted },
-        },
+        { text: p.label, options: { bold: true, color: COLORS.ink } },
+        { text: `   ${p.desc}`, options: { color: COLORS.muted } },
       ],
       {
-        x: 8.0,
+        x: 7.75,
         y,
-        w: 4.4,
-        h: 0.42,
+        w: 5.0,
+        h: 0.38,
         fontFace: FONT.face,
-        fontSize: FONT.body,
+        fontSize: FONT.small,
         valign: 'middle',
       },
     );
   });
 
-  // Overall verdict banner
-  const anyFail = ins.phases.some((p) => aggregateRisk(p.observations) === 'fail');
-  const anyLow = ins.phases.some((p) => aggregateRisk(p.observations) === 'low');
-  const verdict: RiskLevel = anyFail ? 'fail' : anyLow ? 'low' : 'good';
-  const vp = RISK_PALETTE[verdict];
-  const verdictText = anyFail
-    ? 'Failures recorded — review before shipping'
-    : anyLow
-      ? 'Low-risk issues noted'
-      : 'No issues found';
+  // Verdict banner
+  const worst = worstColor(ins);
+  const vp = RISK_PALETTE[worst];
+  const verdictText =
+    worst === 'high'
+      ? 'High-risk failures recorded — review before shipping'
+      : worst === 'medium'
+        ? 'Medium-risk issues recorded'
+        : worst === 'low'
+          ? 'Low-risk issues noted'
+          : worst === 'discuss'
+            ? 'Items need team discussion'
+            : 'No issues found';
   slide.addShape('rect', {
-    x: 7.4,
-    y: 4.6,
-    w: 5.0,
-    h: 0.9,
+    x: 0.6,
+    y: 6.35,
+    w: 12.1,
+    h: 0.7,
     fill: { color: vp.soft },
     line: { color: vp.solid, pt: 1 },
     rectRadius: 0.1,
   });
   slide.addText(verdictText, {
-    x: 7.6,
-    y: 4.6,
-    w: 4.6,
-    h: 0.9,
+    x: 0.9,
+    y: 6.35,
+    w: 11.5,
+    h: 0.7,
     fontFace: FONT.face,
     fontSize: FONT.subheading,
     bold: true,
     color: vp.text,
     valign: 'middle',
   });
-
-  footer(slide);
 }
 
-function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
+function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
   const slide = pptx.addSlide();
   slide.background = { color: COLORS.paper };
   slideHeading(slide, 'Findings by Phase');
@@ -286,9 +317,9 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
   );
 
   const rows = reportablePhases(ins.phases).map((phase) => {
-    const risk = aggregateRisk(phase.observations) ?? 'good';
-    const p = RISK_PALETTE[risk];
-    const fr = phaseFr(phase, ins.sampleCount);
+    const color = aggregateColor(phase.observations) ?? 'good';
+    const p = RISK_PALETTE[color];
+    const fr = phaseFr(phase, units);
     const issues = phase.observations.filter(
       (o) => o.risk !== 'good' && o.status !== 'waived',
     );
@@ -298,12 +329,7 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
 
     const cell = (text: string, opts: Record<string, unknown> = {}) => ({
       text,
-      options: {
-        fontSize: FONT.small,
-        color: COLORS.ink,
-        valign: 'middle' as const,
-        ...opts,
-      },
+      options: { fontSize: FONT.small, color: COLORS.ink, valign: 'middle' as const, ...opts },
     });
 
     return [
@@ -327,10 +353,9 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
     rowH: 0.4,
     fontFace: FONT.face,
     border: { type: 'solid', color: COLORS.line, pt: 1 },
-    align: 'left',
+    valign: 'middle',
     autoPage: true,
     autoPageRepeatHeader: true,
-    autoPageLineWeight: -0.5,
   });
 
   footer(slide);
@@ -338,40 +363,21 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
 
 function buildPhaseSlides(
   pptx: PptxGenJS,
-  ins: Inspection,
   phase: Phase,
-  photos: EncodedPhoto[],
+  encodedSlides: EncodedPhoto[][],
+  units: number,
 ) {
-  const risk = aggregateRisk(phase.observations);
-  const fr = phaseFr(phase, ins.sampleCount);
+  const color = aggregateColor(phase.observations);
+  const fr = phaseFr(phase, units);
+  const frText = `${fr.label} · ${fr.percent}`;
+  const showFr = phase.observations.some(
+    (o) => o.status !== 'waived' && o.risk !== 'good' && o.affectedSamples > 0,
+  );
 
-  // First slide: header + observations (left) + first photo chunk (right)
+  // First slide: header + observations + first slide's photos
   const first = pptx.addSlide();
   first.background = { color: COLORS.paper };
-  phaseHeader(first, phase, risk, `${fr.label} · ${fr.percent}`);
-
-  // Observations column
-  const obsRuns: PptxGenJS.TextProps[] =
-    phase.observations.length > 0
-      ? phase.observations.map((o) => {
-          const pal = RISK_PALETTE[o.risk];
-          return {
-            text: `${obsPrefix(o, ins.sampleCount)}${o.text || pal.label}`,
-            options: {
-              bullet: { code: '2022' },
-              color: o.status === 'waived' ? COLORS.muted : pal.text,
-              fontSize: FONT.body,
-              breakLine: true,
-              paraSpaceAfter: 6,
-            },
-          };
-        })
-      : [
-          {
-            text: 'No observations recorded.',
-            options: { color: COLORS.muted, italic: true, fontSize: FONT.body },
-          },
-        ];
+  phaseHeader(first, phase, color, showFr ? frText : '');
 
   first.addText('Observations', {
     x: 0.5,
@@ -384,6 +390,28 @@ function buildPhaseSlides(
     color: COLORS.muted,
     charSpacing: 1,
   });
+
+  const obsRuns: PptxGenJS.TextProps[] =
+    phase.observations.length > 0
+      ? phase.observations.map((o) => {
+          const pal = RISK_PALETTE[colorOf(o)];
+          return {
+            text: `${obsPrefix(o, units)}${o.text || pal.label}`,
+            options: {
+              bullet: { code: '2022' },
+              color: pal.text,
+              fontSize: FONT.body,
+              breakLine: true,
+              paraSpaceAfter: 6,
+            },
+          };
+        })
+      : [
+          {
+            text: 'No observations recorded.',
+            options: { color: COLORS.muted, italic: true, fontSize: FONT.body },
+          },
+        ];
   first.addText(obsRuns, {
     x: 0.5,
     y: 1.6,
@@ -393,9 +421,9 @@ function buildPhaseSlides(
     valign: 'top',
   });
 
-  const chunks = chunk(photos, PHOTOS_PER_SLIDE);
-  if (chunks.length === 0) {
-    first.addText('No photos captured', {
+  const firstPhotos = encodedSlides[0] ?? [];
+  if (firstPhotos.length === 0) {
+    first.addText('No photos on this slide', {
       x: 4.8,
       y: 3.4,
       w: 8.0,
@@ -407,21 +435,34 @@ function buildPhaseSlides(
       fontSize: FONT.body,
     });
   } else {
-    placePhotoGrid(first, chunks[0], 4.8, 1.3, 8.03, 5.4);
+    placePhotoGrid(first, firstPhotos, 4.8, 1.3, 8.03, 5.4);
   }
-  footer(first, phase.title);
+  footer(first, `${phase.title} — slide 1`);
 
-  // Continuation slides for remaining photo chunks (full width grid)
-  for (let i = 1; i < chunks.length; i++) {
+  // Continuation slides: one per remaining photo slide
+  for (let i = 1; i < encodedSlides.length; i++) {
+    const photos = encodedSlides[i];
+    if (photos.length === 0) continue;
     const cont = pptx.addSlide();
     cont.background = { color: COLORS.paper };
-    phaseHeader(cont, phase, risk, `${fr.label} · ${fr.percent}`, ' (cont.)');
-    placePhotoGrid(cont, chunks[i], 0.5, 1.3, 12.33, 5.4);
-    footer(cont, phase.title);
+    phaseHeader(cont, phase, color, showFr ? frText : '', ` (slide ${i + 1})`);
+    placePhotoGrid(cont, photos, 0.5, 1.3, 12.33, 5.4);
+    footer(cont, `${phase.title} — slide ${i + 1}`);
   }
 }
 
 /* -------------------------------- helpers -------------------------------- */
+
+function worstColor(ins: Inspection) {
+  const order = ['good', 'discuss', 'low', 'medium', 'high'] as const;
+  let worst: (typeof order)[number] = 'good';
+  for (const phase of ins.phases) {
+    const c = aggregateColor(phase.observations);
+    if (!c || c === 'waived') continue;
+    if (order.indexOf(c) > order.indexOf(worst)) worst = c;
+  }
+  return worst;
+}
 
 function slideHeading(slide: PptxGenJS.Slide, text: string) {
   slide.addText(text, {
@@ -446,7 +487,7 @@ function slideHeading(slide: PptxGenJS.Slide, text: string) {
 function phaseHeader(
   slide: PptxGenJS.Slide,
   phase: Phase,
-  risk: RiskLevel | null,
+  color: ReturnType<typeof aggregateColor>,
   frText: string,
   suffix = '',
 ) {
@@ -461,13 +502,13 @@ function phaseHeader(
     fontSize: FONT.subheading,
     bold: true,
     color: COLORS.white,
-    fill: { color: COLORS.ink },
+    fill: { color: COLORS.brand },
     rectRadius: 0.08,
   });
   slide.addText(`${phase.title}${suffix}`, {
     x: 1.2,
     y: 0.38,
-    w: 8.5,
+    w: 8.3,
     h: 0.55,
     valign: 'middle',
     fontFace: FONT.face,
@@ -476,12 +517,12 @@ function phaseHeader(
     color: COLORS.ink,
   });
 
-  if (risk) {
-    const p = RISK_PALETTE[risk];
+  if (color) {
+    const p = RISK_PALETTE[color];
     slide.addText(p.label, {
-      x: 9.9,
+      x: 9.7,
       y: 0.45,
-      w: 1.5,
+      w: 1.8,
       h: 0.42,
       align: 'center',
       valign: 'middle',
@@ -492,19 +533,19 @@ function phaseHeader(
       fill: { color: p.soft },
       rectRadius: 0.2,
     });
-    if (phase.observations.some((o) => o.status !== 'waived' && o.failedSamples > 0)) {
+    if (frText) {
       slide.addText(`FR ${frText}`, {
-        x: 11.5,
+        x: 11.6,
         y: 0.45,
-        w: 1.33,
+        w: 1.23,
         h: 0.42,
         align: 'center',
         valign: 'middle',
         fontFace: FONT.face,
         fontSize: FONT.small,
         bold: true,
-        color: RISK_PALETTE.fail.text,
-        fill: { color: RISK_PALETTE.fail.soft },
+        color: RISK_PALETTE.high.text,
+        fill: { color: RISK_PALETTE.high.soft },
         rectRadius: 0.2,
       });
     }
@@ -526,9 +567,9 @@ function placePhotoGrid(
   areaW: number,
   areaH: number,
 ) {
-  const cols = photos.length <= 2 ? photos.length || 1 : photos.length <= 4 ? 2 : 3;
+  const cols = photos.length <= 1 ? 1 : 2;
   const rows = Math.ceil(photos.length / cols);
-  const gap = 0.15;
+  const gap = 0.18;
   const cellW = (areaW - (cols - 1) * gap) / cols;
   const cellH = (areaH - (rows - 1) * gap) / Math.max(rows, 1);
 
@@ -537,8 +578,6 @@ function placePhotoGrid(
     const row = Math.floor(i / cols);
     const cx = x0 + col * (cellW + gap);
     const cy = y0 + row * (cellH + gap);
-
-    // Cell backdrop
     slide.addShape('rect', {
       x: cx,
       y: cy,
@@ -549,23 +588,22 @@ function placePhotoGrid(
       rectRadius: 0.06,
     });
     const fit = fitContain(photo.width, photo.height, cx, cy, cellW, cellH);
-    slide.addImage({
-      data: photo.dataUrl,
-      x: fit.x,
-      y: fit.y,
-      w: fit.w,
-      h: fit.h,
-    });
+    slide.addImage({ data: photo.dataUrl, x: fit.x, y: fit.y, w: fit.w, h: fit.h });
   });
 }
 
 function footer(slide: PptxGenJS.Slide, left?: string) {
-  slide.addText(
-    [
-      ...(left ? [{ text: left, options: { color: COLORS.muted } }] : []),
-    ],
-    { x: 0.5, y: 7.05, w: 6, h: 0.3, fontFace: FONT.face, fontSize: FONT.tiny },
-  );
+  if (left) {
+    slide.addText(left, {
+      x: 0.5,
+      y: 7.05,
+      w: 6,
+      h: 0.3,
+      fontFace: FONT.face,
+      fontSize: FONT.tiny,
+      color: COLORS.muted,
+    });
+  }
   slide.addText(CONFIDENTIAL, {
     x: 7.33,
     y: 7.05,
@@ -576,10 +614,4 @@ function footer(slide: PptxGenJS.Slide, left?: string) {
     fontSize: FONT.tiny,
     color: COLORS.muted,
   });
-}
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
 }

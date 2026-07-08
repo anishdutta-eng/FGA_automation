@@ -1,42 +1,54 @@
 /**
  * Core data model for the FGA inspection tool.
  *
- * An Inspection covers one SKU and may span multiple physical samples/units.
- * Failure Rate (FR) is always expressed as F / T where:
- *   F = number of samples that failed a given check
- *   T = number of samples inspected (Inspection.sampleCount)
- * FR is a DERIVED value and is never stored directly.
+ * An Inspection covers one SKU across a chosen box type and phase gate. It may
+ * span multiple physical samples (boxes), each containing `unitsPerPack`
+ * devices. The total inspected units is:
+ *
+ *   T = unitsPerPack * sampleCount
+ *
+ * Failure Rate (FR) for any observation is:
+ *
+ *   FR = affectedSamples / T
+ *
+ * where affectedSamples is the number of units that exhibited that behavior.
+ * FR is a DERIVED value and is never stored directly. "Good" observations are
+ * always 0%.
  */
 
-/** Risk level drives the color coding across the app and exported deck. */
-export type RiskLevel = 'good' | 'low' | 'fail';
+import type { BoxTypeId, PhaseGateId } from '@/config/options';
 
-/** Status annotations that can override the plain pass/fail reading. */
-export type ObservationStatus = 'normal' | 'waived';
+/** Severity of an observation. */
+export type RiskSeverity = 'good' | 'low' | 'medium' | 'high';
+
+/** Status annotations that recolor an observation. */
+export type ObservationStatus = 'normal' | 'waived' | 'discuss';
+
+/** All possible display colors (severity + status overrides). */
+export type ColorKey = RiskSeverity | 'waived' | 'discuss';
 
 export interface PhotoRef {
   id: string;
-  /** Original file name from the dropped file. */
   name: string;
-  /** In-memory object URL for preview (revoked on removal). */
-  url: string;
-  /** MIME type, e.g. image/jpeg. */
+  url: string; // ephemeral object URL (regenerated on load)
   type: string;
-  /** Byte size of the source file. */
   size: number;
-  /** The underlying File, kept for later upload/export. */
   file: File;
+}
+
+/** A single deck slide's worth of photos (max 4). */
+export interface PhotoSlide {
+  id: string;
+  photos: PhotoRef[];
 }
 
 export interface Observation {
   id: string;
-  /** Free-text note describing what was seen. */
   text: string;
-  risk: RiskLevel;
+  risk: RiskSeverity;
   status: ObservationStatus;
-  /** F — number of samples that failed this specific check. */
-  failedSamples: number;
-  /** Optional structured fields that feed the summary table. */
+  /** Number of units that exhibited this behavior (0..T). */
+  affectedSamples: number;
   failureMode?: string;
   nextSteps?: string;
   dri?: string;
@@ -44,15 +56,12 @@ export interface Observation {
 
 export interface Phase {
   id: string;
-  /** Slide/section title, e.g. "Tear label inspection". */
   title: string;
-  /** Short helper shown under the title to guide the engineer. */
   guidance: string;
-  /** Determines slide ordering in the exported deck. */
   slideOrder: number;
-  /** Whether photos are required before the deck can be generated. */
   required: boolean;
-  photos: PhotoRef[];
+  /** One or more photo slides (each up to 4 photos). Always at least one. */
+  slides: PhotoSlide[];
   observations: Observation[];
 }
 
@@ -60,13 +69,18 @@ export interface InspectionMeta {
   fgaJira: string;
   sku: string;
   productName: string;
-  /** ISO date string (yyyy-mm-dd). */
   date: string;
   dri: string;
-  /** T — total number of samples/units inspected in this session. */
+  /** Packaging configuration. */
+  boxType: BoxTypeId;
+  /** Development phase gate. */
+  phaseGate: PhaseGateId;
+  /** Destination country code, e.g. US / EU / UK / JP. */
+  countryCode: string;
+  /** Devices per box/pack (auto from box type, editable). */
+  unitsPerPack: number;
+  /** Number of samples (boxes/packs) inspected. */
   sampleCount: number;
-  /** Optional free-form region/market note for the title slide. */
-  region: string;
 }
 
 export interface Inspection extends InspectionMeta {

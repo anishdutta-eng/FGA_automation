@@ -5,29 +5,41 @@ import type {
   Observation,
   Phase,
   PhotoRef,
-  RiskLevel,
+  RiskSeverity,
 } from '@/types';
 import { PHASE_TEMPLATES } from '@/config/phases';
+import { PHOTOS_PER_SLIDE, boxType } from '@/config/options';
 
 type Stage = 'setup' | 'capture';
+
+function newSlide() {
+  return { id: nanoid(), photos: [] as PhotoRef[] };
+}
 
 function buildPhases(): Phase[] {
   return PHASE_TEMPLATES.map((t) => ({
     ...t,
-    photos: [],
+    slides: [newSlide()],
     observations: [],
   }));
 }
 
-const emptyMeta: InspectionMeta = {
-  fgaJira: '',
-  sku: '',
-  productName: '',
-  date: new Date().toISOString().slice(0, 10),
-  dri: '',
-  sampleCount: 1,
-  region: '',
-};
+function makeEmptyMeta(): InspectionMeta {
+  return {
+    fgaJira: '',
+    sku: '',
+    productName: '',
+    date: new Date().toISOString().slice(0, 10),
+    dri: '',
+    boxType: 'pk1',
+    phaseGate: 'EVT',
+    countryCode: '',
+    unitsPerPack: boxType('pk1').unitsPerPack,
+    sampleCount: 1,
+  };
+}
+
+const IMAGE_TYPES = /^image\//;
 
 interface InspectionState {
   stage: Stage;
@@ -35,19 +47,25 @@ interface InspectionState {
   phases: Phase[];
   activePhaseId: string | null;
 
-  // lifecycle
   startInspection: (meta: InspectionMeta) => void;
   updateMeta: (patch: Partial<InspectionMeta>) => void;
   resetInspection: () => void;
   setActivePhase: (id: string) => void;
 
-  // photos
-  addPhotos: (phaseId: string, files: File[]) => void;
-  removePhoto: (phaseId: string, photoId: string) => void;
-  reorderPhotos: (phaseId: string, fromIndex: number, toIndex: number) => void;
+  // photo slides
+  addSlide: (phaseId: string) => void;
+  removeSlide: (phaseId: string, slideId: string) => void;
+  addPhotos: (phaseId: string, slideId: string, files: File[]) => void;
+  removePhoto: (phaseId: string, slideId: string, photoId: string) => void;
+  reorderPhotos: (
+    phaseId: string,
+    slideId: string,
+    fromIndex: number,
+    toIndex: number,
+  ) => void;
 
   // observations
-  addObservation: (phaseId: string, risk?: RiskLevel) => void;
+  addObservation: (phaseId: string, risk?: RiskSeverity) => void;
   updateObservation: (
     phaseId: string,
     obsId: string,
@@ -56,34 +74,26 @@ interface InspectionState {
   removeObservation: (phaseId: string, obsId: string) => void;
 }
 
-const IMAGE_TYPES = /^image\//;
-
 export const useInspection = create<InspectionState>((set) => ({
   stage: 'setup',
-  meta: emptyMeta,
+  meta: makeEmptyMeta(),
   phases: buildPhases(),
   activePhaseId: null,
 
   startInspection: (meta) =>
     set(() => {
       const phases = buildPhases();
-      return {
-        stage: 'capture',
-        meta,
-        phases,
-        activePhaseId: phases[0]?.id ?? null,
-      };
+      return { stage: 'capture', meta, phases, activePhaseId: phases[0]?.id ?? null };
     }),
 
-  updateMeta: (patch) =>
-    set((s) => ({ meta: { ...s.meta, ...patch } })),
+  updateMeta: (patch) => set((s) => ({ meta: { ...s.meta, ...patch } })),
 
   resetInspection: () =>
     set(() => {
       const phases = buildPhases();
       return {
         stage: 'setup',
-        meta: { ...emptyMeta, date: new Date().toISOString().slice(0, 10) },
+        meta: makeEmptyMeta(),
         phases,
         activePhaseId: null,
       };
@@ -91,44 +101,88 @@ export const useInspection = create<InspectionState>((set) => ({
 
   setActivePhase: (id) => set(() => ({ activePhaseId: id })),
 
-  addPhotos: (phaseId, files) =>
-    set((s) => {
-      const images = files.filter((f) => IMAGE_TYPES.test(f.type));
-      if (images.length === 0) return s;
-      const newPhotos: PhotoRef[] = images.map((file) => ({
-        id: nanoid(),
-        name: file.name,
-        url: URL.createObjectURL(file),
-        type: file.type,
-        size: file.size,
-        file,
-      }));
-      return {
-        phases: s.phases.map((p) =>
-          p.id === phaseId ? { ...p, photos: [...p.photos, ...newPhotos] } : p,
-        ),
-      };
-    }),
+  addSlide: (phaseId) =>
+    set((s) => ({
+      phases: s.phases.map((p) =>
+        p.id === phaseId ? { ...p, slides: [...p.slides, newSlide()] } : p,
+      ),
+    })),
 
-  removePhoto: (phaseId, photoId) =>
+  removeSlide: (phaseId, slideId) =>
     set((s) => ({
       phases: s.phases.map((p) => {
         if (p.id !== phaseId) return p;
-        const target = p.photos.find((ph) => ph.id === photoId);
-        if (target) URL.revokeObjectURL(target.url);
-        return { ...p, photos: p.photos.filter((ph) => ph.id !== photoId) };
+        if (p.slides.length <= 1) {
+          // keep at least one slide — just clear it
+          const only = p.slides[0];
+          only.photos.forEach((ph) => URL.revokeObjectURL(ph.url));
+          return { ...p, slides: [newSlide()] };
+        }
+        const target = p.slides.find((sl) => sl.id === slideId);
+        target?.photos.forEach((ph) => URL.revokeObjectURL(ph.url));
+        return { ...p, slides: p.slides.filter((sl) => sl.id !== slideId) };
       }),
     })),
 
-  reorderPhotos: (phaseId, fromIndex, toIndex) =>
+  addPhotos: (phaseId, slideId, files) =>
+    set((s) => {
+      const images = files.filter((f) => IMAGE_TYPES.test(f.type));
+      if (images.length === 0) return s;
+      return {
+        phases: s.phases.map((p) => {
+          if (p.id !== phaseId) return p;
+          return {
+            ...p,
+            slides: p.slides.map((sl) => {
+              if (sl.id !== slideId) return sl;
+              const capacity = PHOTOS_PER_SLIDE - sl.photos.length;
+              if (capacity <= 0) return sl;
+              const toAdd: PhotoRef[] = images.slice(0, capacity).map((file) => ({
+                id: nanoid(),
+                name: file.name,
+                url: URL.createObjectURL(file),
+                type: file.type,
+                size: file.size,
+                file,
+              }));
+              return { ...sl, photos: [...sl.photos, ...toAdd] };
+            }),
+          };
+        }),
+      };
+    }),
+
+  removePhoto: (phaseId, slideId, photoId) =>
     set((s) => ({
       phases: s.phases.map((p) => {
         if (p.id !== phaseId) return p;
-        const next = [...p.photos];
-        const [moved] = next.splice(fromIndex, 1);
-        if (!moved) return p;
-        next.splice(toIndex, 0, moved);
-        return { ...p, photos: next };
+        return {
+          ...p,
+          slides: p.slides.map((sl) => {
+            if (sl.id !== slideId) return sl;
+            const target = sl.photos.find((ph) => ph.id === photoId);
+            if (target) URL.revokeObjectURL(target.url);
+            return { ...sl, photos: sl.photos.filter((ph) => ph.id !== photoId) };
+          }),
+        };
+      }),
+    })),
+
+  reorderPhotos: (phaseId, slideId, fromIndex, toIndex) =>
+    set((s) => ({
+      phases: s.phases.map((p) => {
+        if (p.id !== phaseId) return p;
+        return {
+          ...p,
+          slides: p.slides.map((sl) => {
+            if (sl.id !== slideId) return sl;
+            const next = [...sl.photos];
+            const [moved] = next.splice(fromIndex, 1);
+            if (!moved) return sl;
+            next.splice(toIndex, 0, moved);
+            return { ...sl, photos: next };
+          }),
+        };
       }),
     })),
 
@@ -139,13 +193,11 @@ export const useInspection = create<InspectionState>((set) => ({
         text: '',
         risk,
         status: 'normal',
-        failedSamples: risk === 'fail' ? 1 : 0,
+        affectedSamples: risk === 'good' ? 0 : 1,
       };
       return {
         phases: s.phases.map((p) =>
-          p.id === phaseId
-            ? { ...p, observations: [...p.observations, obs] }
-            : p,
+          p.id === phaseId ? { ...p, observations: [...p.observations, obs] } : p,
         ),
       };
     }),
@@ -168,10 +220,7 @@ export const useInspection = create<InspectionState>((set) => ({
     set((s) => ({
       phases: s.phases.map((p) =>
         p.id === phaseId
-          ? {
-              ...p,
-              observations: p.observations.filter((o) => o.id !== obsId),
-            }
+          ? { ...p, observations: p.observations.filter((o) => o.id !== obsId) }
           : p,
       ),
     })),

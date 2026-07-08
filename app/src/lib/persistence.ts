@@ -1,13 +1,17 @@
-import type { InspectionMeta, Phase, PhotoRef } from '@/types';
+import type { InspectionMeta, Phase, PhotoRef, PhotoSlide } from '@/types';
 import { useInspection } from '@/store/useInspection';
 import { usePersistence } from '@/store/usePersistence';
 import { saveState, loadState, clearState } from './db';
 
-/** Photo as persisted: identical to PhotoRef but without the ephemeral url. */
+/** Bump when the persisted shape changes; older snapshots are discarded. */
+const SCHEMA_VERSION = 2;
+
 type PersistedPhoto = Omit<PhotoRef, 'url'>;
-type PersistedPhase = Omit<Phase, 'photos'> & { photos: PersistedPhoto[] };
+type PersistedSlide = Omit<PhotoSlide, 'photos'> & { photos: PersistedPhoto[] };
+type PersistedPhase = Omit<Phase, 'slides'> & { slides: PersistedSlide[] };
 
 interface Snapshot {
+  schema: number;
   stage: 'setup' | 'capture';
   meta: InspectionMeta;
   activePhaseId: string | null;
@@ -21,31 +25,36 @@ const SAVED_FLASH_MS = 1200;
 function stripUrls(phases: Phase[]): PersistedPhase[] {
   return phases.map((p) => ({
     ...p,
-    photos: p.photos.map(({ url: _url, ...rest }) => rest),
+    slides: p.slides.map((s) => ({
+      ...s,
+      photos: s.photos.map(({ url: _url, ...rest }) => rest),
+    })),
   }));
 }
 
 function restoreUrls(phases: PersistedPhase[]): Phase[] {
   return phases.map((p) => ({
     ...p,
-    photos: p.photos.map((ph) => ({
-      ...ph,
-      url: URL.createObjectURL(ph.file),
+    slides: p.slides.map((s) => ({
+      ...s,
+      photos: s.photos.map((ph) => ({ ...ph, url: URL.createObjectURL(ph.file) })),
     })),
   }));
 }
 
-/** Load any saved inspection from IndexedDB into the store. Call once on boot. */
 export async function hydrate(): Promise<void> {
   try {
     const snap = await loadState<Snapshot>();
-    if (snap && snap.stage === 'capture') {
+    if (snap && snap.schema === SCHEMA_VERSION && snap.stage === 'capture') {
       useInspection.setState({
         stage: snap.stage,
         meta: snap.meta,
         activePhaseId: snap.activePhaseId,
         phases: restoreUrls(snap.phases),
       });
+    } else if (snap && snap.schema !== SCHEMA_VERSION) {
+      // Old/incompatible snapshot — clear it.
+      await clearState();
     }
   } catch (err) {
     console.warn('Failed to hydrate inspection from IndexedDB:', err);
@@ -57,12 +66,10 @@ export async function hydrate(): Promise<void> {
 let timer: ReturnType<typeof setTimeout> | undefined;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** Subscribe the store to IndexedDB with debounced writes. Returns unsubscribe. */
 export function startPersistence(): () => void {
   return useInspection.subscribe((state) => {
     if (timer) clearTimeout(timer);
 
-    // Setup stage means no active inspection — clear any saved snapshot.
     if (state.stage === 'setup') {
       void clearState();
       usePersistence.getState().setStatus('idle');
@@ -72,6 +79,7 @@ export function startPersistence(): () => void {
     usePersistence.getState().setStatus('saving');
     timer = setTimeout(async () => {
       const snapshot: Snapshot = {
+        schema: SCHEMA_VERSION,
         stage: state.stage,
         meta: state.meta,
         activePhaseId: state.activePhaseId,

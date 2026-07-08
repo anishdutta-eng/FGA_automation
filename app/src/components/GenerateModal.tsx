@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useInspection } from '@/store/useInspection';
-import { aggregateRisk } from '@/lib/fr';
+import { aggregateColor, phasePhotoCount, totalUnits } from '@/lib/fr';
 import type { ProgressInfo } from '@/lib/report/buildDeck';
 import { downloadRecord } from '@/lib/report/buildRecord';
 import type { Inspection } from '@/types';
@@ -20,11 +20,11 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
   const [error, setError] = useState<string | null>(null);
 
   const inspection: Inspection = { ...meta, phases };
-  const photoCount = phases.reduce((n, p) => n + p.photos.length, 0);
+  const photoCount = phases.reduce((n, p) => n + phasePhotoCount(p), 0);
   const documentedPhases = phases.filter(
-    (p) => p.photos.length > 0 || p.observations.length > 0,
+    (p) => phasePhotoCount(p) > 0 || p.observations.length > 0,
   ).length;
-  const anyFail = phases.some((p) => aggregateRisk(p.observations) === 'fail');
+  const anyFail = phases.some((p) => aggregateColor(p.observations) === 'high');
 
   const handleDeck = async () => {
     setStatus('building');
@@ -76,16 +76,13 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
         <div className="mb-5 grid grid-cols-3 gap-3">
           <Stat label="Phases" value={String(documentedPhases)} />
           <Stat label="Photos" value={String(photoCount)} />
-          <Stat
-            label="Samples (T)"
-            value={String(inspection.sampleCount)}
-          />
+          <Stat label="Units (T)" value={String(totalUnits(inspection))} />
         </div>
 
         {anyFail && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl bg-risk-failSoft px-3.5 py-2.5 text-sm font-semibold text-risk-fail">
-            <span className="h-2 w-2 rounded-full bg-risk-fail" />
-            Failures recorded — flagged in the deck summary
+          <div className="mb-5 flex items-center gap-2 rounded-xl bg-risk-highSoft px-3.5 py-2.5 text-sm font-semibold text-risk-high">
+            <span className="h-2 w-2 rounded-full bg-risk-high" />
+            High-risk failures recorded — flagged in the deck summary
           </div>
         )}
 
@@ -114,7 +111,7 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
         )}
 
         {status === 'error' && (
-          <div className="mb-5 rounded-xl bg-risk-failSoft px-3.5 py-2.5 text-sm text-risk-fail">
+          <div className="mb-5 rounded-xl bg-risk-highSoft px-3.5 py-2.5 text-sm text-risk-high">
             {error}
           </div>
         )}

@@ -5,7 +5,7 @@ import { ProgressMeter } from './ProgressMeter';
 import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
 import { GenerateModal } from './GenerateModal';
-import { aggregateRisk, isPhaseComplete } from '@/lib/fr';
+import { aggregateColor, isPhaseComplete, totalUnits } from '@/lib/fr';
 
 export function CaptureScreen() {
   const meta = useInspection((s) => s.meta);
@@ -22,7 +22,7 @@ export function CaptureScreen() {
   const allRequiredDone = completed === requiredPhases.length;
 
   const anyFail = useMemo(
-    () => phases.some((p) => aggregateRisk(p.observations) === 'fail'),
+    () => phases.some((p) => aggregateColor(p.observations) === 'high'),
     [phases],
   );
 
@@ -32,8 +32,8 @@ export function CaptureScreen() {
       <header className="sticky top-0 z-30 border-b border-ink-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-900">
-              <span className="h-3.5 w-3.5 rounded-full border-2 border-brand-400" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800">
+              <span className="h-3.5 w-3.5 rounded-full border-2 border-white/80" />
             </span>
             <span className="font-bold tracking-tight text-ink-900">
               FGA Inspection Studio
@@ -44,7 +44,7 @@ export function CaptureScreen() {
             <Meta label="JIRA" value={meta.fgaJira} />
             <Meta label="SKU" value={meta.sku} />
             <Meta label="Product" value={meta.productName} />
-            <Meta label="T" value={String(meta.sampleCount)} />
+            <Meta label="T" value={String(totalUnits(meta))} />
           </div>
 
           <div className="ml-auto flex items-center gap-3">
@@ -84,9 +84,9 @@ export function CaptureScreen() {
             <div className="card p-4">
               <ProgressMeter completed={completed} total={requiredPhases.length} />
               {anyFail && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-risk-failSoft px-3 py-2 text-xs font-semibold text-risk-fail">
-                  <span className="h-2 w-2 rounded-full bg-risk-fail" />
-                  Failures recorded — review before shipping
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-risk-highSoft px-3 py-2 text-xs font-semibold text-risk-high">
+                  <span className="h-2 w-2 rounded-full bg-risk-high" />
+                  High-risk failures recorded — review before shipping
                 </div>
               )}
             </div>
