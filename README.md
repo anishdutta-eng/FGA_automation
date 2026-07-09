@@ -25,6 +25,12 @@ FGA_automation/
 
 ## Getting started
 
+**Easiest:** double-click **`app/start.command`** (macOS) or **`app/start.bat`**
+(Windows). It installs dependencies on first run, starts the app, and opens your
+browser.
+
+Or from a terminal:
+
 ```bash
 cd app
 npm install
