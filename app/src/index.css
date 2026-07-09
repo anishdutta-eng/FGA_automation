@@ -11,7 +11,6 @@
 
   body {
     @apply bg-ink-50 text-ink-900 antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   * {

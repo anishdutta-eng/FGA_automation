@@ -13,18 +13,18 @@ export const COLORS = {
   line: 'DCDCE1',
   paper: 'FFFFFF',
   panel: 'F7F7F8',
-  brand: '7C3AED',
+  brand: '2E63A6',
   white: 'FFFFFF',
 } as const;
 
-/** Title-slide palette: elegant purple. */
+/** Title-slide palette: elegant blue. */
 export const TITLE = {
-  bg: '3A1D6E',
-  band: '2C1556',
-  accent: 'A78BFA',
+  bg: '234B7A',
+  band: '1B3A61',
+  accent: '8BB8E3',
   text: 'FFFFFF',
-  sub: 'E3DAF7',
-  muted: 'B4A3DE',
+  sub: 'D8E9F7',
+  muted: 'A9C4E4',
 } as const;
 
 export interface RiskPalette {
@@ -91,7 +91,7 @@ export const LEGEND_ORDER: ColorKey[] = [
 ];
 
 export const FONT = {
-  face: 'Arial',
+  face: 'DM Sans',
   title: 32,
   heading: 22,
   subheading: 14,

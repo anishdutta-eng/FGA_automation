@@ -5,7 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          'Inter',
+          '"DM Sans"',
           'system-ui',
           '-apple-system',
           'Segoe UI',
@@ -44,16 +44,16 @@ export default {
           discussSoft: '#e2e8f0',
         },
         brand: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
+          50: '#eef5fc',
+          100: '#d8e9f7',
+          200: '#b6d4ef',
+          300: '#8bb8e3',
+          400: '#5b96d4',
+          500: '#3b78c0',
+          600: '#2e63a6',
+          700: '#274f85',
+          800: '#24446c',
+          900: '#213c5c',
         },
         accent: {
           50: '#ecfdf5',

@@ -70,7 +70,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
   },
   {
     id: 'accessory-box',
-    title: 'Accessories (PSU, Ethernet, Clamps, WSL)',
+    title: 'PSU, Ethernet Cable, WSL, Accessories',
     guidance:
       'Inspect and photograph all accessories: PSU, ethernet cables, clamps, and WSL. Check completeness and condition.',
     slideOrder: 8,
