@@ -53,6 +53,9 @@ interface InspectionState {
   resetInspection: () => void;
   setActivePhase: (id: string) => void;
 
+  // per-phase trials override (null clears back to calculated max)
+  setPhaseTrials: (phaseId: string, trials: number | null) => void;
+
   // slides
   addSlide: (phaseId: string) => void;
   removeSlide: (phaseId: string, slideId: string) => void;
@@ -113,6 +116,15 @@ export const useInspection = create<InspectionState>((set) => ({
     }),
 
   setActivePhase: (id) => set(() => ({ activePhaseId: id })),
+
+  setPhaseTrials: (phaseId, trials) =>
+    set((s) => ({
+      phases: s.phases.map((p) =>
+        p.id === phaseId
+          ? { ...p, trialsOverride: trials == null ? undefined : trials }
+          : p,
+      ),
+    })),
 
   addSlide: (phaseId) =>
     set((s) => ({

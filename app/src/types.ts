@@ -79,6 +79,11 @@ export interface Phase {
   required: boolean;
   /** Basis for this phase's Failure Rate denominator (default 'unit'). */
   unitBasis: UnitBasis;
+  /**
+   * Optional inspector override for trials (T). Must be <= the calculated max
+   * for the phase. When unset, T = the calculated max.
+   */
+  trialsOverride?: number;
   /** One or more slides, each with photos + observations. Always at least one. */
   slides: PhotoSlide[];
 }

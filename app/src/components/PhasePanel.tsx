@@ -6,6 +6,7 @@ import {
   phaseObservations,
   phasePhotoCount,
   phaseUnits,
+  phaseMaxUnits,
   RISK_META,
 } from '@/lib/fr';
 import { PHOTOS_PER_SLIDE } from '@/config/options';
@@ -22,6 +23,7 @@ interface PhasePanelProps {
 export function PhasePanel({ phase }: PhasePanelProps) {
   const meta = useInspection((s) => s.meta);
   const addSlide = useInspection((s) => s.addSlide);
+  const setPhaseTrials = useInspection((s) => s.setPhaseTrials);
   const removeSlide = useInspection((s) => s.removeSlide);
   const addPhotos = useInspection((s) => s.addPhotos);
   const removePhoto = useInspection((s) => s.removePhoto);
@@ -31,6 +33,7 @@ export function PhasePanel({ phase }: PhasePanelProps) {
   const removeObservation = useInspection((s) => s.removeObservation);
 
   const units = phaseUnits(meta, phase);
+  const maxUnits = phaseMaxUnits(meta, phase);
   const observations = phaseObservations(phase);
   const color = aggregateColor(observations);
   const fr = phaseFr(phase, units);
@@ -70,10 +73,31 @@ export function PhasePanel({ phase }: PhasePanelProps) {
             {phase.slides.length}
           </span>
         </h3>
-        <span className="text-xs text-ink-400">
-          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units}{' '}
-          {phase.unitBasis === 'pack' ? 'per box' : 'units'}
-        </span>
+        <div className="flex items-center gap-3 text-xs text-ink-400">
+          <span>
+            {photoCount} photo{photoCount === 1 ? '' : 's'}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-semibold text-ink-500">Trials (T)</span>
+            <input
+              type="number"
+              min={1}
+              max={maxUnits}
+              value={units}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') return;
+                const n = Math.max(1, Math.min(maxUnits, Math.floor(Number(raw) || 1)));
+                setPhaseTrials(phase.id, n >= maxUnits ? null : n);
+              }}
+              className="input w-16 px-2 py-1 text-center text-xs"
+              title={`Max ${maxUnits} (${
+                phase.unitBasis === 'pack' ? 'one per box' : 'units per pack × samples'
+              }). You can only lower it.`}
+            />
+            <span className="text-ink-400">/ {maxUnits} max</span>
+          </span>
+        </div>
       </div>
 
       <div className="space-y-4">

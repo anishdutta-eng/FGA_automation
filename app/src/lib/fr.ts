@@ -20,17 +20,31 @@ export function totalUnits(meta: {
 }
 
 /**
- * Trials (T) for a specific phase, respecting its unit basis:
+ * Calculated maximum trials (T) for a phase, respecting its unit basis:
  * - 'pack': one item per box  -> T = sampleCount
  * - 'unit': one per device    -> T = unitsPerPack * sampleCount
  */
-export function phaseUnits(
+export function phaseMaxUnits(
   meta: { unitsPerPack: number; sampleCount: number },
   phase: Phase,
 ): number {
   return phase.unitBasis === 'pack'
     ? Math.max(0, Math.floor(meta.sampleCount))
     : totalUnits(meta);
+}
+
+/**
+ * Effective trials (T) for a phase: the inspector's override if set, otherwise
+ * the calculated max. The override is clamped to [1, max] so it can only lower
+ * the count, never exceed what physically exists.
+ */
+export function phaseUnits(
+  meta: { unitsPerPack: number; sampleCount: number },
+  phase: Phase,
+): number {
+  const max = phaseMaxUnits(meta, phase);
+  if (phase.trialsOverride == null) return max;
+  return Math.max(1, Math.min(Math.floor(phase.trialsOverride), max));
 }
 
 export interface FrResult {
