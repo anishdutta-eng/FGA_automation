@@ -69,11 +69,35 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
-    id: 'accessory-box',
-    title: 'PSU, Ethernet Cable, WSL, Accessories',
+    id: 'psu',
+    title: 'PSU',
     guidance:
-      'Inspect and photograph all accessories: PSU, ethernet cables, clamps, and WSL. Check completeness and condition.',
+      'Inspect and photograph the power supply unit. Check condition, labels, cable, and connector.',
     slideOrder: 8,
+    required: true,
+  },
+  {
+    id: 'ethernet-cable',
+    title: 'Ethernet Cable',
+    guidance:
+      'Inspect and photograph the ethernet cable(s). Check condition, length, and connectors.',
+    slideOrder: 9,
+    required: true,
+  },
+  {
+    id: 'wsl',
+    title: 'WSL',
+    guidance:
+      'Inspect and photograph the WSL. Verify presence, correctness, and condition.',
+    slideOrder: 10,
+    required: true,
+  },
+  {
+    id: 'accessories',
+    title: 'Accessories',
+    guidance:
+      'Inspect and photograph the remaining accessories (clamps, adapters, etc.). Check completeness and condition.',
+    slideOrder: 11,
     required: true,
   },
   {
@@ -81,7 +105,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'QR Codes',
     guidance:
       'Verify all QR codes are present and scannable. Capture a photo of each and note scan results.',
-    slideOrder: 9,
+    slideOrder: 12,
     required: true,
   },
   {
@@ -89,7 +113,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Warranty, Safety & Legal Documents',
     guidance:
       'Confirm the correct Warranty, Safety, and Legal documents are packed for the SKU-to-country mapping.',
-    slideOrder: 10,
+    slideOrder: 13,
     required: true,
   },
   {
@@ -97,7 +121,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Power-On Test',
     guidance:
       'Confirm the device powers on. Photograph the LED/boot state and note the result.',
-    slideOrder: 11,
+    slideOrder: 14,
     required: true,
   },
 ];

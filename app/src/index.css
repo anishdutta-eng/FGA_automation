@@ -9,8 +9,14 @@
     height: 100%;
   }
 
+  html {
+    font-family:
+      'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
+  }
+
   body {
-    @apply bg-ink-50 text-ink-900 antialiased;
+    @apply bg-ink-50 font-sans text-ink-900 antialiased;
   }
 
   * {
