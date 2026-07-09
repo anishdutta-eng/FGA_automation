@@ -91,17 +91,19 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     id: 'wsl',
     title: 'WSL',
     guidance:
-      'Inspect and photograph the WSL. Verify presence, correctness, and condition.',
+      'Inspect and photograph the WSL. Verify presence, correctness, and condition. One per box, so FR is over the number of samples.',
     slideOrder: 10,
     required: true,
+    unitBasis: 'pack',
   },
   {
     id: 'accessories',
     title: 'Accessories',
     guidance:
-      'Inspect and photograph the remaining accessories (clamps, adapters, etc.). Check completeness and condition.',
+      'Inspect and photograph the remaining accessories (clamps, adapters, etc.). One set per box, so FR is over the number of samples.',
     slideOrder: 11,
     required: true,
+    unitBasis: 'pack',
   },
   {
     id: 'qr-signs',

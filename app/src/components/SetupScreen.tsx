@@ -231,10 +231,17 @@ export function SetupScreen() {
             Start inspection
           </button>
         </form>
+
+        <p className="mt-4 text-center text-[11px] text-ink-400">
+          Build {APP_BUILD}
+        </p>
       </div>
     </div>
   );
 }
+
+/** Bump this whenever we ship UI changes, so a reload can be confirmed. */
+const APP_BUILD = 'v7 · editable-trials';
 
 function Field({
   label,
