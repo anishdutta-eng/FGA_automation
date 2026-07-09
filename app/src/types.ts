@@ -33,7 +33,13 @@ export interface PhotoRef {
   url: string; // ephemeral object URL (regenerated on load)
   type: string;
   size: number;
-  file: File;
+  /**
+   * App-owned copy of the image bytes. We store a Blob (not the original File)
+   * so the data is persisted by value in IndexedDB and stays readable after a
+   * reload — reading the original File can throw NotFoundError once the OS file
+   * reference goes stale.
+   */
+  blob: Blob;
 }
 
 /**

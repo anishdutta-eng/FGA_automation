@@ -31,6 +31,11 @@ export interface ProgressInfo {
 }
 type Progress = (info: ProgressInfo) => void;
 
+export interface DeckResult {
+  photosTotal: number;
+  photosEmbedded: number;
+}
+
 function sanitize(s: string): string {
   return s.replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '') || 'inspection';
 }
@@ -51,7 +56,7 @@ function obsPrefix(o: Observation, units: number): string {
 export async function generateDeck(
   inspection: Inspection,
   onProgress?: Progress,
-): Promise<void> {
+): Promise<DeckResult> {
   const units = totalUnits(inspection);
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: LAYOUT.name, width: LAYOUT.width, height: LAYOUT.height });
@@ -76,6 +81,9 @@ export async function generateDeck(
   tick('Building findings table');
   buildFindingsTable(pptx, inspection, units);
 
+  let photosTotal = 0;
+  let photosEmbedded = 0;
+
   for (const phase of inspection.phases) {
     if (phasePhotoCount(phase) === 0 && phaseObservations(phase).length === 0) continue;
     tick(`Adding "${phase.title}"`);
@@ -83,6 +91,8 @@ export async function generateDeck(
       const slide = phase.slides[i];
       if (slide.photos.length === 0 && slide.observations.length === 0) continue;
       const encoded = await encodePhotos(slide.photos);
+      photosTotal += slide.photos.length;
+      photosEmbedded += encoded.length;
       buildPhaseSlide(
         pptx,
         phase,
@@ -95,6 +105,7 @@ export async function generateDeck(
   }
 
   await pptx.writeFile({ fileName: `${sanitize(deckName)}.pptx` });
+  return { photosTotal, photosEmbedded };
 }
 
 /* ----------------------------- slide builders ---------------------------- */
@@ -103,7 +114,7 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
   const slide = pptx.addSlide();
   slide.background = { color: TITLE.bg };
 
-  // Top band for the brand lockup
+  // Top band
   slide.addShape('rect', {
     x: 0,
     y: 0,
@@ -113,89 +124,30 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
     line: { type: 'none' },
   });
 
-  // FGA wordmark + green accent dot
-  slide.addText('FGA', {
-    x: 0.9,
-    y: 0.5,
-    w: 1.5,
-    h: 0.5,
-    fontFace: FONT.face,
-    fontSize: 22,
-    bold: true,
-    color: TITLE.text,
-    valign: 'middle',
-  });
-  slide.addShape('ellipse', {
-    x: 1.98,
-    y: 0.73,
-    w: 0.15,
-    h: 0.15,
-    fill: { color: TITLE.accent },
-    line: { type: 'none' },
-  });
-  slide.addText('Inspection Studio', {
-    x: 9.3,
-    y: 0.5,
-    w: 3.1,
-    h: 0.5,
-    align: 'right',
-    fontFace: FONT.face,
-    fontSize: FONT.body,
-    color: TITLE.muted,
-    valign: 'middle',
-  });
-
   // Accent bar
   slide.addShape('rect', {
     x: 0.9,
-    y: 3.15,
+    y: 2.55,
     w: 1.6,
     h: 0.09,
     fill: { color: TITLE.accent },
     line: { type: 'none' },
   });
 
-  slide.addText('HARDWARE INSPECTION', {
+  // Heading = the deck name
+  slide.addText(deckName, {
     x: 0.9,
-    y: 2.15,
+    y: 2.85,
     w: 11.5,
-    h: 0.4,
+    h: 1.9,
     fontFace: FONT.face,
-    fontSize: FONT.body,
-    bold: true,
-    color: TITLE.sub,
-    charSpacing: 3,
-  });
-
-  slide.addText(ins.productName || 'Inspection', {
-    x: 0.9,
-    y: 2.25,
-    w: 11.5,
-    h: 0.9,
-    fontFace: FONT.face,
-    fontSize: FONT.title + 6,
+    fontSize: 30,
     bold: true,
     color: TITLE.text,
+    valign: 'top',
   });
 
-  const sub = [
-    ins.sku && `SKU ${ins.sku}`,
-    ins.phaseGate,
-    ins.countryCode,
-    boxType(ins.boxType).label,
-  ]
-    .filter(Boolean)
-    .join('    ·    ');
-  slide.addText(sub, {
-    x: 0.9,
-    y: 3.4,
-    w: 11.5,
-    h: 0.5,
-    fontFace: FONT.face,
-    fontSize: FONT.heading,
-    color: TITLE.sub,
-  });
-
+  // Meta line
   slide.addText(
     [
       { text: 'Date  ', options: { color: TITLE.muted } },
@@ -207,7 +159,7 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
     ],
     {
       x: 0.9,
-      y: 4.15,
+      y: 5.4,
       w: 11.5,
       h: 0.4,
       fontFace: FONT.face,
@@ -215,18 +167,9 @@ function buildTitleSlide(pptx: PptxGenJS, ins: Inspection, deckName: string) {
     },
   );
 
-  slide.addText(deckName, {
-    x: 0.9,
-    y: 6.5,
-    w: 11.5,
-    h: 0.3,
-    fontFace: FONT.face,
-    fontSize: FONT.small,
-    color: TITLE.muted,
-  });
   slide.addText(CONFIDENTIAL, {
     x: 0.9,
-    y: 6.85,
+    y: 6.9,
     w: 11.5,
     h: 0.3,
     fontFace: FONT.face,
@@ -352,9 +295,13 @@ function buildSummarySlide(pptx: PptxGenJS, ins: Inspection) {
 function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
   const slide = pptx.addSlide();
   slide.background = { color: COLORS.paper };
-  slideHeading(slide, 'Findings by Phase');
+  const name = [ins.productName, ins.sku, ins.countryCode]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(' ');
+  slideHeading(slide, `FGA ${name}${name ? ' ' : ''}Summary`);
 
-  const header = ['Phase', 'FR', 'Failure mode', 'Next steps / comment', 'DRI'].map(
+  const header = ['Topic', 'FR', 'Failure mode', 'Next steps / comment', 'DRI'].map(
     (t) => ({
       text: t,
       options: {
@@ -373,9 +320,36 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
     const p = RISK_PALETTE[color];
     const fr = phaseFr(phase, units);
     const issues = obs.filter((o) => o.risk !== 'good' && o.status !== 'waived');
-    const failureMode = issues.map((o) => o.failureMode || o.text).filter(Boolean).join('; ');
     const nextSteps = issues.map((o) => o.nextSteps).filter(Boolean).join('; ');
     const dri = Array.from(new Set(issues.map((o) => o.dri).filter(Boolean))).join(', ');
+
+    // Failure-mode cell: one line per observation with its own FR.
+    // Green -> the observation text; yellow/orange/red -> the failure mode.
+    const modeRuns: PptxGenJS.TextProps[] =
+      obs.length > 0
+        ? obs.map((o) => {
+            const pal = RISK_PALETTE[colorOf(o)];
+            const ofr = observationFr(o, units);
+            const label =
+              o.risk === 'good'
+                ? o.text || pal.label
+                : o.failureMode || o.text || pal.label;
+            const tag =
+              o.status === 'waived'
+                ? '[WAIVED] '
+                : o.status === 'discuss'
+                  ? '[DISCUSS] '
+                  : '';
+            return {
+              text: `${tag}${ofr.label} · ${ofr.percent} — ${label}`,
+              options: {
+                color: pal.text,
+                fontSize: 9,
+                breakLine: true,
+              },
+            };
+          })
+        : [{ text: '—', options: { color: COLORS.muted, fontSize: 9 } }];
 
     const cell = (text: string, opts: Record<string, unknown> = {}) => ({
       text,
@@ -389,7 +363,7 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
         color: p.text,
         fill: { color: p.soft },
       }),
-      cell(failureMode || '—'),
+      { text: modeRuns, options: { valign: 'middle' as const } },
       cell(nextSteps || '—'),
       cell(dri || '—', { align: 'center' }),
     ];
@@ -399,7 +373,7 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
     x: 0.5,
     y: 1.45,
     w: 12.33,
-    colW: [3.2, 1.6, 3.0, 3.13, 1.4],
+    colW: [3.0, 1.5, 3.6, 2.93, 1.3],
     rowH: 0.4,
     fontFace: FONT.face,
     border: { type: 'solid', color: COLORS.line, pt: 1 },

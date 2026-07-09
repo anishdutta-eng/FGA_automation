@@ -30,13 +30,20 @@ export function measureImage(
   });
 }
 
-/** Encode a list of photos for embedding, preserving order. */
+/**
+ * Encode a list of photos for embedding, preserving order. Resilient: if a
+ * single photo can't be read, it is skipped rather than failing the whole deck.
+ */
 export async function encodePhotos(photos: PhotoRef[]): Promise<EncodedPhoto[]> {
   const out: EncodedPhoto[] = [];
   for (const photo of photos) {
-    const dataUrl = await fileToDataUrl(photo.file);
-    const { width, height } = await measureImage(dataUrl);
-    out.push({ id: photo.id, name: photo.name, dataUrl, width, height });
+    try {
+      const dataUrl = await fileToDataUrl(photo.blob);
+      const { width, height } = await measureImage(dataUrl);
+      out.push({ id: photo.id, name: photo.name, dataUrl, width, height });
+    } catch (err) {
+      console.warn('Skipping unreadable photo in export:', photo.name, err);
+    }
   }
   return out;
 }

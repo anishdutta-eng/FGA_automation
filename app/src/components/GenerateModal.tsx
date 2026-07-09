@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useInspection } from '@/store/useInspection';
 import { aggregateColor, phaseObservations, phasePhotoCount, totalUnits } from '@/lib/fr';
-import type { ProgressInfo } from '@/lib/report/buildDeck';
+import type { ProgressInfo, DeckResult } from '@/lib/report/buildDeck';
 import { downloadRecord } from '@/lib/report/buildRecord';
 import type { Inspection } from '@/types';
 import { cn } from '@/lib/cn';
@@ -18,6 +18,7 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<DeckResult | null>(null);
 
   const inspection: Inspection = { ...meta, phases };
   const photoCount = phases.reduce((n, p) => n + phasePhotoCount(p), 0);
@@ -31,7 +32,8 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
     setError(null);
     try {
       const { generateDeck } = await import('@/lib/report/buildDeck');
-      await generateDeck(inspection, setProgress);
+      const res = await generateDeck(inspection, setProgress);
+      setResult(res);
       setStatus('done');
     } catch (err) {
       console.error(err);
@@ -102,11 +104,21 @@ export function GenerateModal({ onClose }: GenerateModalProps) {
         )}
 
         {status === 'done' && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl bg-risk-goodSoft px-3.5 py-2.5 text-sm font-semibold text-risk-good">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Deck downloaded — import it into Google Slides
+          <div className="mb-5 space-y-2">
+            <div className="flex items-center gap-2 rounded-xl bg-risk-goodSoft px-3.5 py-2.5 text-sm font-semibold text-risk-good">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Deck downloaded — {result?.photosEmbedded ?? 0} photo
+              {(result?.photosEmbedded ?? 0) === 1 ? '' : 's'} embedded
+            </div>
+            {result && result.photosEmbedded < result.photosTotal && (
+              <div className="rounded-xl bg-risk-mediumSoft px-3.5 py-2.5 text-sm font-medium text-risk-medium">
+                {result.photosTotal - result.photosEmbedded} photo(s) couldn't be
+                read and were skipped. Start a new inspection and re-add those
+                photos, then regenerate.
+              </div>
+            )}
           </div>
         )}
 

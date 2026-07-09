@@ -54,7 +54,7 @@ interface InspectionState {
   removeSlide: (phaseId: string, slideId: string) => void;
 
   // photos (scoped to a slide)
-  addPhotos: (phaseId: string, slideId: string, files: File[]) => void;
+  addPhotos: (phaseId: string, slideId: string, files: File[]) => Promise<void>;
   removePhoto: (phaseId: string, slideId: string, photoId: string) => void;
   reorderPhotos: (
     phaseId: string,
@@ -131,26 +131,48 @@ export const useInspection = create<InspectionState>((set) => ({
       }),
     })),
 
-  addPhotos: (phaseId, slideId, files) =>
-    set((s) => {
-      const images = files.filter((f) => IMAGE_TYPES.test(f.type));
-      if (images.length === 0) return s;
-      return {
-        phases: updateSlide(s.phases, phaseId, slideId, (sl) => {
-          const capacity = PHOTOS_PER_SLIDE - sl.photos.length;
-          if (capacity <= 0) return sl;
-          const toAdd: PhotoRef[] = images.slice(0, capacity).map((file) => ({
-            id: nanoid(),
-            name: file.name,
-            url: URL.createObjectURL(file),
-            type: file.type,
-            size: file.size,
-            file,
-          }));
-          return { ...sl, photos: [...sl.photos, ...toAdd] };
-        }),
-      };
-    }),
+  addPhotos: async (phaseId, slideId, files) => {
+    const images = files.filter((f) => IMAGE_TYPES.test(f.type));
+    if (images.length === 0) return;
+
+    // Determine remaining capacity for this slide right now.
+    const state = useInspection.getState();
+    const slide = state.phases
+      .find((p) => p.id === phaseId)
+      ?.slides.find((sl) => sl.id === slideId);
+    if (!slide) return;
+    const capacity = PHOTOS_PER_SLIDE - slide.photos.length;
+    if (capacity <= 0) return;
+
+    // Copy each file's bytes into an app-owned Blob so the data is self-
+    // contained and survives reloads / stale OS file references.
+    const toAdd: PhotoRef[] = [];
+    for (const file of images.slice(0, capacity)) {
+      try {
+        const buf = await file.arrayBuffer();
+        const blob = new Blob([buf], { type: file.type || 'image/jpeg' });
+        toAdd.push({
+          id: nanoid(),
+          name: file.name,
+          url: URL.createObjectURL(blob),
+          type: blob.type,
+          size: blob.size,
+          blob,
+        });
+      } catch (err) {
+        console.warn('Could not read dropped file:', file.name, err);
+      }
+    }
+    if (toAdd.length === 0) return;
+
+    set((s) => ({
+      phases: updateSlide(s.phases, phaseId, slideId, (sl) => {
+        // Re-check capacity in case state changed while reading.
+        const room = PHOTOS_PER_SLIDE - sl.photos.length;
+        return { ...sl, photos: [...sl.photos, ...toAdd.slice(0, room)] };
+      }),
+    }));
+  },
 
   removePhoto: (phaseId, slideId, photoId) =>
     set((s) => ({

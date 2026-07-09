@@ -17,11 +17,11 @@ export const COLORS = {
   white: 'FFFFFF',
 } as const;
 
-/** Title-slide palette: elegant purple with a green highlight. */
+/** Title-slide palette: elegant purple. */
 export const TITLE = {
   bg: '3A1D6E',
   band: '2C1556',
-  accent: '34D399',
+  accent: 'A78BFA',
   text: 'FFFFFF',
   sub: 'E3DAF7',
   muted: 'B4A3DE',

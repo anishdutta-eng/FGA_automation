@@ -4,7 +4,7 @@ import { usePersistence } from '@/store/usePersistence';
 import { saveState, loadState, clearState } from './db';
 
 /** Bump when the persisted shape changes; older snapshots are discarded. */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 type PersistedPhoto = Omit<PhotoRef, 'url'>;
 type PersistedSlide = Omit<PhotoSlide, 'photos'> & { photos: PersistedPhoto[] };
@@ -37,7 +37,7 @@ function restoreUrls(phases: PersistedPhase[]): Phase[] {
     ...p,
     slides: p.slides.map((s) => ({
       ...s,
-      photos: s.photos.map((ph) => ({ ...ph, url: URL.createObjectURL(ph.file) })),
+      photos: s.photos.map((ph) => ({ ...ph, url: URL.createObjectURL(ph.blob) })),
     })),
   }));
 }
