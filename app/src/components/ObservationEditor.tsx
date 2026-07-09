@@ -1,11 +1,17 @@
 import type { Observation, RiskSeverity } from '@/types';
 import { RISK_META, observationFr, colorOf } from '@/lib/fr';
+import { NumberField } from './NumberField';
 import { cn } from '@/lib/cn';
 
 interface ObservationRowProps {
   observation: Observation;
+  /** Effective trials (T) for this phase. */
   units: number;
+  /** Calculated maximum trials — the ceiling the inspector can set T to. */
+  maxUnits: number;
   onChange: (patch: Partial<Observation>) => void;
+  /** Change the phase-level trials (T). */
+  onChangeTrials: (trials: number) => void;
   onRemove: () => void;
 }
 
@@ -14,7 +20,9 @@ const SEVERITIES: RiskSeverity[] = ['good', 'low', 'medium', 'high'];
 export function ObservationRow({
   observation,
   units,
+  maxUnits,
   onChange,
+  onChangeTrials,
   onRemove,
 }: ObservationRowProps) {
   const color = colorOf(observation);
@@ -93,40 +101,41 @@ export function ObservationRow({
         </button>
       </div>
 
-      {/* Controls row */}
+      {/* Controls row: inline editable Failure Rate */}
       <div className="mt-3 flex flex-wrap items-center gap-2 pl-[3.25rem]">
-        {/* Affected samples (hidden for good) */}
-        {!isGood && (
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-600">
-            Affected
-            <input
-              type="number"
-              min={0}
-              max={units}
-              value={observation.affectedSamples}
-              onChange={(e) =>
-                onChange({
-                  affectedSamples: Math.max(
-                    0,
-                    Math.min(units, Math.floor(Number(e.target.value) || 0)),
-                  ),
-                })
-              }
-              className="input w-16 px-2 py-1.5 text-center"
-            />
-            <span className="text-ink-400">/ {units}</span>
-          </label>
-        )}
-
-        {/* FR — always shown */}
-        <span
+        <div
           className={cn(
-            'whitespace-nowrap rounded-md px-2 py-1 font-mono text-xs font-semibold',
+            'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold',
             meta.chip,
           )}
         >
-          FR {fr.label} · {fr.percent}
-        </span>
+          <span className="uppercase tracking-wide">FR</span>
+          <NumberField
+            value={observation.affectedSamples}
+            min={0}
+            max={units}
+            disabled={isGood}
+            onCommit={(n) => onChange({ affectedSamples: n })}
+            ariaLabel="Failed samples"
+            title={
+              isGood
+                ? 'Good observations have 0 failures'
+                : 'Number of samples that showed this behavior'
+            }
+            className="w-11 rounded-md border border-white/60 bg-white/80 px-1 py-0.5 text-center font-mono text-ink-900 outline-none focus:border-current disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          <span className="opacity-70">/</span>
+          <NumberField
+            value={units}
+            min={1}
+            max={maxUnits}
+            onCommit={onChangeTrials}
+            ariaLabel="Trials"
+            title={`Trials inspected for this phase (shared across its observations). Max ${maxUnits}.`}
+            className="w-11 rounded-md border border-white/60 bg-white/80 px-1 py-0.5 text-center font-mono text-ink-900 outline-none focus:border-current"
+          />
+          <span className="opacity-90">· {fr.percent}</span>
+        </div>
 
         <div className="flex-1" />
 

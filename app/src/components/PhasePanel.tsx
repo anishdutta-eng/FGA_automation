@@ -73,31 +73,11 @@ export function PhasePanel({ phase }: PhasePanelProps) {
             {phase.slides.length}
           </span>
         </h3>
-        <div className="flex items-center gap-3 text-xs text-ink-400">
-          <span>
-            {photoCount} photo{photoCount === 1 ? '' : 's'}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="font-semibold text-ink-500">Trials (T)</span>
-            <input
-              type="number"
-              min={1}
-              max={maxUnits}
-              value={units}
-              onChange={(e) => {
-                const raw = e.target.value;
-                if (raw === '') return;
-                const n = Math.max(1, Math.min(maxUnits, Math.floor(Number(raw) || 1)));
-                setPhaseTrials(phase.id, n >= maxUnits ? null : n);
-              }}
-              className="input w-16 px-2 py-1 text-center text-xs"
-              title={`Max ${maxUnits} (${
-                phase.unitBasis === 'pack' ? 'one per box' : 'units per pack × samples'
-              }). You can only lower it.`}
-            />
-            <span className="text-ink-400">/ {maxUnits} max</span>
-          </span>
-        </div>
+        <span className="text-xs text-ink-400">
+          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units}
+          {units !== maxUnits ? ` (max ${maxUnits})` : ''}{' '}
+          {phase.unitBasis === 'pack' ? 'per box' : 'units'}
+        </span>
       </div>
 
       <div className="space-y-4">
@@ -164,8 +144,12 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                       key={obs.id}
                       observation={obs}
                       units={units}
+                      maxUnits={maxUnits}
                       onChange={(patch) =>
                         updateObservation(phase.id, slide.id, obs.id, patch)
+                      }
+                      onChangeTrials={(t) =>
+                        setPhaseTrials(phase.id, t >= maxUnits ? null : t)
                       }
                       onRemove={() => removeObservation(phase.id, slide.id, obs.id)}
                     />

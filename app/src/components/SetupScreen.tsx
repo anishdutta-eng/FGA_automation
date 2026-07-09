@@ -241,7 +241,7 @@ export function SetupScreen() {
 }
 
 /** Bump this whenever we ship UI changes, so a reload can be confirmed. */
-const APP_BUILD = 'v7 · editable-trials';
+const APP_BUILD = 'v8 · inline-editable-FR';
 
 function Field({
   label,
