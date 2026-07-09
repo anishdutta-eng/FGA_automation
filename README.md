@@ -28,7 +28,9 @@ FGA_automation/
 ```bash
 cd app
 npm install
-npm run dev          # http://localhost:5173
+npm start            # starts the server AND opens the browser
+# or:
+npm run dev          # start the server without opening a browser (http://localhost:5173)
 ```
 
 Other scripts:

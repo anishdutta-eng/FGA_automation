@@ -6,6 +6,7 @@
   "description": "FGA hardware inspection capture tool — drag-and-drop photo documentation with risk-scored observations and Google Slides export.",
   "scripts": {
     "dev": "vite",
+    "start": "vite --open",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint ."
