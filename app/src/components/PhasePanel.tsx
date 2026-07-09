@@ -5,7 +5,7 @@ import {
   aggregateColor,
   phaseObservations,
   phasePhotoCount,
-  totalUnits,
+  phaseUnits,
   RISK_META,
 } from '@/lib/fr';
 import { PHOTOS_PER_SLIDE } from '@/config/options';
@@ -30,7 +30,7 @@ export function PhasePanel({ phase }: PhasePanelProps) {
   const updateObservation = useInspection((s) => s.updateObservation);
   const removeObservation = useInspection((s) => s.removeObservation);
 
-  const units = totalUnits(meta);
+  const units = phaseUnits(meta, phase);
   const observations = phaseObservations(phase);
   const color = aggregateColor(observations);
   const fr = phaseFr(phase, units);
@@ -71,7 +71,8 @@ export function PhasePanel({ phase }: PhasePanelProps) {
           </span>
         </h3>
         <span className="text-xs text-ink-400">
-          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units} units
+          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units}{' '}
+          {phase.unitBasis === 'pack' ? 'per box' : 'units'}
         </span>
       </div>
 

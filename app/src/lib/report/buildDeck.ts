@@ -8,6 +8,7 @@ import {
   observationsFr,
   phaseObservations,
   phasePhotoCount,
+  phaseUnits,
   totalUnits,
   deckDisplayName,
 } from '@/lib/fr';
@@ -57,7 +58,6 @@ export async function generateDeck(
   inspection: Inspection,
   onProgress?: Progress,
 ): Promise<DeckResult> {
-  const units = totalUnits(inspection);
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: LAYOUT.name, width: LAYOUT.width, height: LAYOUT.height });
   pptx.layout = LAYOUT.name;
@@ -79,7 +79,7 @@ export async function generateDeck(
   buildSummarySlide(pptx, inspection);
 
   tick('Building findings table');
-  buildFindingsTable(pptx, inspection, units);
+  buildFindingsTable(pptx, inspection);
 
   let photosTotal = 0;
   let photosEmbedded = 0;
@@ -87,6 +87,7 @@ export async function generateDeck(
   for (const phase of inspection.phases) {
     if (phasePhotoCount(phase) === 0 && phaseObservations(phase).length === 0) continue;
     tick(`Adding "${phase.title}"`);
+    const pUnits = phaseUnits(inspection, phase);
     for (let i = 0; i < phase.slides.length; i++) {
       const slide = phase.slides[i];
       if (slide.photos.length === 0 && slide.observations.length === 0) continue;
@@ -98,7 +99,7 @@ export async function generateDeck(
         phase,
         slide,
         encoded,
-        units,
+        pUnits,
         phase.slides.length > 1 ? i + 1 : 0,
       );
     }
@@ -292,7 +293,7 @@ function buildSummarySlide(pptx: PptxGenJS, ins: Inspection) {
   });
 }
 
-function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
+function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
   const slide = pptx.addSlide();
   slide.background = { color: COLORS.paper };
   const name = [ins.productName, ins.sku, ins.countryCode]
@@ -315,6 +316,7 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection, units: number) {
   );
 
   const rows = reportablePhases(ins.phases).map((phase) => {
+    const units = phaseUnits(ins, phase);
     const obs = phaseObservations(phase);
     const color = aggregateColor(obs) ?? 'good';
     const p = RISK_PALETTE[color];

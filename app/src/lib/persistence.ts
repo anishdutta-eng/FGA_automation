@@ -4,7 +4,7 @@ import { usePersistence } from '@/store/usePersistence';
 import { saveState, loadState, clearState } from './db';
 
 /** Bump when the persisted shape changes; older snapshots are discarded. */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 type PersistedPhoto = Omit<PhotoRef, 'url'>;
 type PersistedSlide = Omit<PhotoSlide, 'photos'> & { photos: PersistedPhoto[] };

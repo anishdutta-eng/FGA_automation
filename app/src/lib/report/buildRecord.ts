@@ -6,6 +6,7 @@ import {
   colorOf,
   phaseObservations,
   totalUnits,
+  phaseUnits,
   phasePhotoCount,
   deckDisplayName,
 } from '@/lib/fr';
@@ -37,6 +38,8 @@ export interface InspectionRecord {
     id: string;
     title: string;
     slideOrder: number;
+    unitBasis: string;
+    trials: number;
     color: string | null;
     fr: { failed: number; trials: number; ratio: number; label: string; percent: string };
     photoCount: number;
@@ -89,18 +92,22 @@ export function buildRecord(ins: Inspection): InspectionRecord {
           : worst.includes('discuss')
             ? 'discuss'
             : 'good',
-    phases: ins.phases.map((phase) => ({
+    phases: ins.phases.map((phase) => {
+      const pUnits = phaseUnits(ins, phase);
+      return {
       id: phase.id,
       title: phase.title,
       slideOrder: phase.slideOrder,
+      unitBasis: phase.unitBasis,
+      trials: pUnits,
       color: aggregateColor(phaseObservations(phase)),
-      fr: phaseFr(phase, units),
+      fr: phaseFr(phase, pUnits),
       photoCount: phasePhotoCount(phase),
       slides: phase.slides.map((s, i) => ({
         index: i + 1,
         photos: s.photos.map((ph) => ({ name: ph.name, type: ph.type, size: ph.size })),
         observations: s.observations.map((o) => {
-          const ofr = observationFr(o, units);
+          const ofr = observationFr(o, pUnits);
           return {
             text: o.text,
             risk: o.risk,
@@ -114,7 +121,8 @@ export function buildRecord(ins: Inspection): InspectionRecord {
           };
         }),
       })),
-    })),
+      };
+    }),
   };
 }
 

@@ -1,4 +1,4 @@
-import type { Phase } from '@/types';
+import type { Phase, UnitBasis } from '@/types';
 
 /**
  * Canonical inspection phase list, seeded from the reference FGA deck.
@@ -9,7 +9,7 @@ import type { Phase } from '@/types';
 export type PhaseTemplate = Pick<
   Phase,
   'id' | 'title' | 'guidance' | 'slideOrder' | 'required'
->;
+> & { unitBasis?: UnitBasis };
 
 export const PHASE_TEMPLATES: PhaseTemplate[] = [
   {
@@ -80,9 +80,12 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     id: 'ethernet-cable',
     title: 'Ethernet Cable',
     guidance:
-      'Inspect and photograph the ethernet cable(s). Check condition, length, and connectors.',
+      'Inspect and photograph the ethernet cable(s). Check condition, length, and connectors. One cable per box, so FR is over the number of samples.',
     slideOrder: 9,
     required: true,
+    // Exactly one ethernet cable per box (1PK/2PK/3PK/Basic Box), so the FR
+    // denominator is the number of samples, not units-per-pack x samples.
+    unitBasis: 'pack',
   },
   {
     id: 'wsl',

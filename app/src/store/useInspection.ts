@@ -18,7 +18,11 @@ function newSlide(): PhotoSlide {
 }
 
 function buildPhases(): Phase[] {
-  return PHASE_TEMPLATES.map((t) => ({ ...t, slides: [newSlide()] }));
+  return PHASE_TEMPLATES.map((t) => ({
+    ...t,
+    unitBasis: t.unitBasis ?? 'unit',
+    slides: [newSlide()],
+  }));
 }
 
 function makeEmptyMeta(): InspectionMeta {

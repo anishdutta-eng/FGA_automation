@@ -19,6 +19,20 @@ export function totalUnits(meta: {
   return Math.max(0, Math.floor(meta.unitsPerPack)) * Math.max(0, Math.floor(meta.sampleCount));
 }
 
+/**
+ * Trials (T) for a specific phase, respecting its unit basis:
+ * - 'pack': one item per box  -> T = sampleCount
+ * - 'unit': one per device    -> T = unitsPerPack * sampleCount
+ */
+export function phaseUnits(
+  meta: { unitsPerPack: number; sampleCount: number },
+  phase: Phase,
+): number {
+  return phase.unitBasis === 'pack'
+    ? Math.max(0, Math.floor(meta.sampleCount))
+    : totalUnits(meta);
+}
+
 export interface FrResult {
   failed: number;
   trials: number;

@@ -64,12 +64,21 @@ export interface Observation {
   dri?: string;
 }
 
+/**
+ * How many of an item are inspected per box:
+ * - 'unit': one per device  -> T = unitsPerPack * sampleCount
+ * - 'pack': one per box/pack -> T = sampleCount
+ */
+export type UnitBasis = 'unit' | 'pack';
+
 export interface Phase {
   id: string;
   title: string;
   guidance: string;
   slideOrder: number;
   required: boolean;
+  /** Basis for this phase's Failure Rate denominator (default 'unit'). */
+  unitBasis: UnitBasis;
   /** One or more slides, each with photos + observations. Always at least one. */
   slides: PhotoSlide[];
 }
