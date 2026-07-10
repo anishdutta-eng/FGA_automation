@@ -41,8 +41,22 @@ export function SetupScreen() {
     meta.unitsPerPack >= 1;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 via-ink-50 to-ink-50 p-6">
-      <div className="w-full max-w-2xl animate-fade-in">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-brand-50 via-ink-50 to-ink-50 p-6">
+      {/* Decorative product imagery — subtle, flanking the card on wide screens */}
+      <img
+        src="/left_picture.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[22vw] lg:max-w-xs xl:w-[24vw] xl:max-w-sm [mask-image:linear-gradient(to_right,transparent,black_35%)]"
+      />
+      <img
+        src="/right_picture.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute right-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[22vw] lg:max-w-xs xl:w-[24vw] xl:max-w-sm [mask-image:linear-gradient(to_left,transparent,black_35%)]"
+      />
+
+      <div className="relative z-10 w-full max-w-2xl animate-fade-in">
         <div className="mb-9 text-center">
           <div className="mx-auto mb-5 inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-3 shadow-lift">
             <span className="text-2xl font-extrabold tracking-tight text-white">

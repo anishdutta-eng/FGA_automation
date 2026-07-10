@@ -38,7 +38,7 @@ export const PHASE_GATES: PhaseGateOption[] = [
   { id: 'EVT', label: 'EVT' },
   { id: 'DVT', label: 'DVT' },
   { id: 'PVT', label: 'PVT' },
-  { id: 'MP', label: 'MP (Mass Production)' },
+  { id: 'MP', label: 'MP' },
 ];
 
 /** Max photos allowed on a single deck slide. */
