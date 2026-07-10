@@ -9,6 +9,7 @@ import {
   type PhaseGateId,
 } from '@/config/options';
 import { totalUnits, deckDisplayName } from '@/lib/fr';
+import { VERSION_LABEL } from '@/version';
 import { cn } from '@/lib/cn';
 
 export function SetupScreen() {
@@ -233,15 +234,12 @@ export function SetupScreen() {
         </form>
 
         <p className="mt-4 text-center text-[11px] text-ink-400">
-          Build {APP_BUILD}
+          FGA Inspection Studio · {VERSION_LABEL}
         </p>
       </div>
     </div>
   );
 }
-
-/** Bump this whenever we ship UI changes, so a reload can be confirmed. */
-const APP_BUILD = 'v8 · inline-editable-FR';
 
 function Field({
   label,

@@ -6,6 +6,7 @@ import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
 import { GenerateModal } from './GenerateModal';
 import { Wordmark } from './Wordmark';
+import { VERSION_LABEL } from '@/version';
 import {
   aggregateColor,
   isPhaseComplete,
@@ -42,6 +43,9 @@ export function CaptureScreen() {
       <header className="sticky top-0 z-30 border-b border-ink-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           <Wordmark />
+          <span className="hidden rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-semibold text-ink-500 sm:inline">
+            {VERSION_LABEL}
+          </span>
 
           <div className="hidden items-center gap-x-4 gap-y-0.5 text-xs text-ink-500 sm:flex sm:flex-wrap">
             <Meta label="JIRA" value={meta.fgaJira} />
