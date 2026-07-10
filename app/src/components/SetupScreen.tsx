@@ -54,7 +54,7 @@ export function SetupScreen() {
             Inspection Studio
           </h1>
           <p className="mt-3 text-sm text-ink-400">
-            Document a hardware inspection and generate a review-ready deck.
+            Document a product inspection and generate a review-ready presentation.
           </p>
         </div>
 
