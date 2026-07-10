@@ -41,7 +41,7 @@ export function SetupScreen() {
     meta.unitsPerPack >= 1;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink-50 p-6">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 via-ink-50 to-ink-50 p-6">
       <div className="w-full max-w-2xl animate-fade-in">
         <div className="mb-9 text-center">
           <div className="mx-auto mb-5 inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-3 shadow-lift">
