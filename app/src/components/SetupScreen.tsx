@@ -44,16 +44,18 @@ export function SetupScreen() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-brand-50 via-ink-50 to-ink-50 p-6">
       {/* Decorative product imagery — subtle, flanking the card on wide screens */}
       <img
-        src="/left_picture.png"
+        src="/left_picture.webp"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute left-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[22vw] lg:max-w-xs xl:w-[24vw] xl:max-w-sm [mask-image:linear-gradient(to_right,transparent,black_35%)]"
+        decoding="async"
+        className="pointer-events-none absolute left-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[32vw] lg:max-w-md xl:w-[34vw] xl:max-w-lg [mask-image:linear-gradient(to_right,transparent,black_50%)]"
       />
       <img
-        src="/right_picture.png"
+        src="/right_picture.webp"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute right-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[22vw] lg:max-w-xs xl:w-[24vw] xl:max-w-sm [mask-image:linear-gradient(to_left,transparent,black_35%)]"
+        decoding="async"
+        className="pointer-events-none absolute right-0 top-1/2 hidden -translate-y-1/2 select-none opacity-80 drop-shadow-xl lg:block lg:w-[32vw] lg:max-w-md xl:w-[34vw] xl:max-w-lg [mask-image:linear-gradient(to_left,transparent,black_50%)]"
       />
 
       <div className="relative z-10 w-full max-w-2xl animate-fade-in">

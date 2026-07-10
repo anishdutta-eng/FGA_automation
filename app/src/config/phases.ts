@@ -114,19 +114,11 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
-    id: 'documents',
-    title: 'Warranty, Safety & Legal Documents',
-    guidance:
-      'Confirm the correct Warranty, Safety, and Legal documents are packed for the SKU-to-country mapping.',
-    slideOrder: 13,
-    required: true,
-  },
-  {
     id: 'power-on',
     title: 'Power-On Test',
     guidance:
       'Confirm the device powers on. Photograph the LED/boot state and note the result.',
-    slideOrder: 14,
+    slideOrder: 13,
     required: true,
   },
 ];
