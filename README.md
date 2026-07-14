@@ -52,6 +52,37 @@ To demo on another device on the same network:
 npm run dev -- --host   # then open the printed Network URL
 ```
 
+## Deploying internally
+
+The app is a fully static bundle — all data (photos, observations, exports)
+stays in the user's browser, so hosting only needs to serve static files behind
+Midway. Build output goes to `app/dist`.
+
+| Setting        | Value              |
+| -------------- | ------------------ |
+| Base directory | `app`              |
+| Build command  | `npm run build`    |
+| Output / publish dir | `app/dist`    |
+
+**Root domain** (e.g. a custom `amazon.dev` domain via Supernova + HighCastle) —
+no extra config, just build:
+
+```bash
+npm run build
+```
+
+**Subpath hosting** (e.g. Console Harmony at `…/fga-inspection/`) — set the base
+path at build time so every asset resolves correctly:
+
+```bash
+APP_BASE_PATH=/fga-inspection/ npm run build
+```
+
+Notes:
+- The app has no client-side router, so no SPA rewrite rules are needed.
+- `APP_BASE_PATH` is normalized automatically (leading/trailing slashes added),
+  and defaults to `/` when unset.
+
 ## The workflow
 
 1. Enter inspection metadata: FGA JIRA, SKU, eero product name, date, DRI, and
