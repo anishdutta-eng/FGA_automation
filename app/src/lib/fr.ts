@@ -35,16 +35,16 @@ export function phaseMaxUnits(
 
 /**
  * Effective trials (T) for a phase: the inspector's override if set, otherwise
- * the calculated max. The override is clamped to [1, max] so it can only lower
- * the count, never exceed what physically exists.
+ * the calculated max. The override is floored at 1 but may exceed the derived
+ * max — an inspector can check more of an item (e.g. extra case packs) than the
+ * sample math predicts, so the count is theirs to raise or lower.
  */
 export function phaseUnits(
   meta: { unitsPerPack: number; sampleCount: number },
   phase: Phase,
 ): number {
-  const max = phaseMaxUnits(meta, phase);
-  if (phase.trialsOverride == null) return max;
-  return Math.max(1, Math.min(Math.floor(phase.trialsOverride), max));
+  if (phase.trialsOverride == null) return phaseMaxUnits(meta, phase);
+  return Math.max(1, Math.floor(phase.trialsOverride));
 }
 
 export interface FrResult {

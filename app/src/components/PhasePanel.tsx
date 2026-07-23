@@ -14,6 +14,7 @@ import { PhotoDropzone } from './PhotoDropzone';
 import { PhotoGrid } from './PhotoGrid';
 import { ObservationRow } from './ObservationEditor';
 import { RiskBadge } from './RiskBadge';
+import { NumberField } from './NumberField';
 import { cn } from '@/lib/cn';
 
 interface PhasePanelProps {
@@ -73,10 +74,32 @@ export function PhasePanel({ phase }: PhasePanelProps) {
             {phase.slides.length}
           </span>
         </h3>
-        <span className="text-xs text-ink-400">
-          {photoCount} photo{photoCount === 1 ? '' : 's'} · T = {units}
-          {units !== maxUnits ? ` (max ${maxUnits})` : ''}{' '}
-          {phase.unitBasis === 'pack' ? 'per box' : 'units'}
+        <span className="flex items-center gap-1.5 text-xs text-ink-400">
+          {photoCount} photo{photoCount === 1 ? '' : 's'} ·
+          <span className="inline-flex items-center gap-1 font-medium text-ink-600">
+            T =
+            <NumberField
+              value={units}
+              min={1}
+              onCommit={(n) => setPhaseTrials(phase.id, n === maxUnits ? null : n)}
+              ariaLabel="Trials inspected for this phase"
+              title={`Number of ${
+                phase.unitBasis === 'pack' ? 'packs/boxes' : 'units'
+              } inspected for this phase. Default ${maxUnits}; raise or lower as needed.`}
+              className="w-14 rounded-md border border-ink-200 bg-white px-1.5 py-0.5 text-center font-mono text-ink-900 outline-none focus:border-brand-400"
+            />
+            {phase.unitBasis === 'pack' ? 'per box' : 'units'}
+          </span>
+          {phase.trialsOverride != null && (
+            <button
+              type="button"
+              onClick={() => setPhaseTrials(phase.id, null)}
+              className="rounded-md px-1.5 py-0.5 font-semibold text-brand-600 transition hover:bg-brand-50"
+              title={`Reset to the calculated default (${maxUnits})`}
+            >
+              reset
+            </button>
+          )}
         </span>
       </div>
 
@@ -149,7 +172,7 @@ export function PhasePanel({ phase }: PhasePanelProps) {
                         updateObservation(phase.id, slide.id, obs.id, patch)
                       }
                       onChangeTrials={(t) =>
-                        setPhaseTrials(phase.id, t >= maxUnits ? null : t)
+                        setPhaseTrials(phase.id, t === maxUnits ? null : t)
                       }
                       onRemove={() => removeObservation(phase.id, slide.id, obs.id)}
                     />

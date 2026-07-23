@@ -128,10 +128,9 @@ export function ObservationRow({
           <NumberField
             value={units}
             min={1}
-            max={maxUnits}
             onCommit={onChangeTrials}
             ariaLabel="Trials"
-            title={`Trials inspected for this phase (shared across its observations). Max ${maxUnits}.`}
+            title={`Trials inspected for this phase (shared across its observations). Default ${maxUnits}; raise or lower as needed.`}
             className="w-11 rounded-md border border-white/60 bg-white/80 px-1 py-0.5 text-center font-mono text-ink-900 outline-none focus:border-current"
           />
           <span className="opacity-90">· {fr.percent}</span>
