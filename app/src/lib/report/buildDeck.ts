@@ -1,7 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
 import type { Inspection, Observation, Phase, PhotoSlide } from '@/types';
 import {
-  phaseFr,
   aggregateColor,
   colorOf,
   observationFr,
@@ -315,80 +314,97 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
     .join(' ');
   slideHeading(slide, `FGA ${name}${name ? ' ' : ''}Summary`);
 
-  const header = ['Topic', 'FR', 'Failure mode', 'Next steps / comment', 'DRI'].map(
-    (t) => ({
-      text: t,
-      options: {
-        bold: true,
-        color: COLORS.white,
-        fill: { color: COLORS.brand },
-        fontSize: FONT.small,
-        valign: 'middle' as const,
-      },
-    }),
-  );
+  const header = [
+    'Topic',
+    'FR',
+    'Failure mode',
+    'Next steps / comment',
+    'DRI',
+  ].map((t) => ({
+    text: t,
+    options: {
+      bold: true,
+      color: COLORS.white,
+      fill: { color: COLORS.brand },
+      fontSize: FONT.small,
+      valign: 'middle' as const,
+    },
+  }));
 
-  const rows = reportablePhases(ins.phases).map((phase) => {
+  // One row per observation, grouped under its phase. Each observation gets its
+  // own FR (in the FR column) alongside its own failure mode, next steps, and
+  // DRI — nothing is collapsed into a single "common" failure any more.
+  const rows: PptxGenJS.TableRow[] = [];
+
+  for (const phase of reportablePhases(ins.phases)) {
     const units = phaseUnits(ins, phase);
     const obs = phaseObservations(phase);
-    const color = aggregateColor(obs) ?? 'good';
-    const p = RISK_PALETTE[color];
-    const fr = phaseFr(phase, units);
-    const issues = obs.filter((o) => o.risk !== 'good' && o.status !== 'waived');
-    const nextSteps = issues.map((o) => o.nextSteps).filter(Boolean).join('; ');
-    const dri = Array.from(new Set(issues.map((o) => o.dri).filter(Boolean))).join(', ');
+    const pColor = aggregateColor(obs) ?? 'good';
+    const pp = RISK_PALETTE[pColor];
 
-    // Failure-mode cell: one line per observation with its own FR.
-    // Green -> the observation text; yellow/orange/red -> the failure mode.
-    const modeRuns: PptxGenJS.TextProps[] =
-      obs.length > 0
-        ? obs.map((o) => {
-            const pal = RISK_PALETTE[colorOf(o)];
-            const ofr = observationFr(o, units);
-            const label =
-              o.risk === 'good'
-                ? o.text || pal.label
-                : o.failureMode || o.text || pal.label;
-            const tag =
-              o.status === 'waived'
-                ? '[WAIVED] '
-                : o.status === 'discuss'
-                  ? '[DISCUSS] '
-                  : '';
-            return {
-              text: `${tag}${ofr.label} · ${ofr.percent} — ${label}`,
-              options: {
-                color: pal.text,
-                fontSize: 9,
-                breakLine: true,
-              },
-            };
-          })
-        : [{ text: '—', options: { color: COLORS.muted, fontSize: 9 } }];
+    // Topic cell: phase title, shown once and colour-banded across the group.
+    const topicCell = (first: boolean): PptxGenJS.TableCell =>
+      first
+        ? {
+            text: phase.title,
+            options: { bold: true, color: pp.text, fill: { color: pp.soft }, valign: 'middle', fontSize: FONT.small },
+          }
+        : { text: '', options: { fill: { color: pp.soft } } };
 
-    const cell = (text: string, opts: Record<string, unknown> = {}) => ({
-      text,
-      options: { fontSize: FONT.small, color: COLORS.ink, valign: 'middle' as const, ...opts },
+    if (obs.length === 0) {
+      // Reportable because it has photos, but nothing was observed.
+      rows.push([
+        topicCell(true),
+        { text: '—', options: { align: 'center', fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
+        { text: 'Photos captured; no observations recorded.', options: { fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
+        { text: '—', options: { fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
+        { text: '—', options: { align: 'center', fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
+      ]);
+      continue;
+    }
+
+    obs.forEach((o, idx) => {
+      const oc = colorOf(o);
+      const op = RISK_PALETTE[oc];
+      const ofr = observationFr(o, units);
+      const isGood = o.risk === 'good';
+      const tag =
+        o.status === 'waived'
+          ? '[WAIVED] '
+          : o.status === 'discuss'
+            ? '[DISCUSS] '
+            : '';
+      // The failure mode column shows the observation description: the explicit
+      // failure-mode field if provided, otherwise the observation text.
+      const mode = o.failureMode || o.text || op.label;
+
+      rows.push([
+        topicCell(idx === 0),
+        {
+          text: `${ofr.label} · ${ofr.percent}`,
+          options: { align: 'center', color: op.text, fill: { color: op.soft }, fontSize: FONT.small, valign: 'middle' },
+        },
+        {
+          text: `${tag}${mode}`,
+          options: { color: op.text, bold: !isGood, fontSize: FONT.small, valign: 'middle' },
+        },
+        {
+          text: o.nextSteps || '—',
+          options: { color: COLORS.ink, fontSize: FONT.small, valign: 'middle' },
+        },
+        {
+          text: o.dri || '—',
+          options: { align: 'center', color: COLORS.ink, fontSize: FONT.small, valign: 'middle' },
+        },
+      ]);
     });
-
-    return [
-      cell(phase.title, { bold: true, color: p.text, fill: { color: p.soft } }),
-      cell(`${fr.label} · ${fr.percent}`, {
-        align: 'center',
-        color: p.text,
-        fill: { color: p.soft },
-      }),
-      { text: modeRuns, options: { valign: 'middle' as const } },
-      cell(nextSteps || '—'),
-      cell(dri || '—', { align: 'center' }),
-    ];
-  });
+  }
 
   slide.addTable([header, ...rows], {
     x: 0.5,
     y: 1.45,
     w: 12.33,
-    colW: [3.0, 1.5, 3.6, 2.93, 1.3],
+    colW: [2.8, 1.3, 4.2, 2.73, 1.3],
     rowH: 0.4,
     fontFace: FONT.face,
     border: { type: 'solid', color: COLORS.line, pt: 1 },
