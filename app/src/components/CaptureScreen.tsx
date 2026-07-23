@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useInspection } from '@/store/useInspection';
 import { PhaseTimeline } from './PhaseTimeline';
+import { MobilePhaseNav } from './MobilePhaseNav';
 import { ProgressMeter } from './ProgressMeter';
 import { PhasePanel } from './PhasePanel';
 import { SaveIndicator } from './SaveIndicator';
@@ -108,10 +109,17 @@ export function CaptureScreen() {
         </aside>
 
         {/* Main */}
-        <main className="min-w-0 flex-1">
+        <main className="min-w-0 flex-1 pb-4">
           {activePhase && <PhasePanel phase={activePhase} />}
         </main>
       </div>
+
+      {/* Mobile phase navigation (hidden on lg+, where the sidebar handles it) */}
+      <MobilePhaseNav
+        phases={phases}
+        activePhaseId={activePhase?.id ?? null}
+        onSelect={setActivePhase}
+      />
 
       {showGenerate && <GenerateModal onClose={() => setShowGenerate(false)} />}
     </div>
