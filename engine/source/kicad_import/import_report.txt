@@ -1,0 +1,12 @@
+Import Report
+=============
+
+Source file: 175-02000-A-20240802_0802_1009.brd
+Source format: Allegro
+Output file: snowbird.kicad_pcb
+
+Statistics:
+  Footprints: 2340
+  Tracks: 10529
+  Vias: 4995
+  Zones: 408

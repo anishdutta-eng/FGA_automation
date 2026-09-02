@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Snowbird PCB Debug Accelerator</title>
+<style>
+  :root {
+    --bg: #0b1220; --panel: #121b2e; --panel2: #0f1626; --line: #22304d;
+    --ink: #e8eef8; --muted: #8ba0c4; --brand: #5b8cff;
+    --pass: #34d399; --fail: #f87171; --warn: #fbbf24; --na: #4b5a76;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--panel2);
+          border: 1px solid var(--line); color: var(--muted); }
+  main { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; min-height: 0; }
+  .board { position: relative; overflow: hidden; background:
+    radial-gradient(1200px 800px at 30% 20%, #10203a 0%, #0a1120 70%); }
+  svg { width: 100%; height: 100%; display: block; }
+  .outline { stroke: #66e39a; stroke-width: .35; fill: rgba(30,80,55,.18); }
+  .tp { cursor: pointer; }
+  .tp-dot { stroke: #0b1220; stroke-width: .25; }
+  .tp-label { font-size: 1.7px; fill: #cfe0ff; pointer-events: none; opacity: .0; }
+  .board.labels .tp-label { opacity: .9; }
+  .comp-dot { fill: var(--warn); stroke: #0b1220; stroke-width: .15; opacity: .95; }
+  .comp-label { font-size: 1.5px; fill: #ffe9b8; pointer-events: none; }
+  .ring { fill: none; }
+
+  aside { border-left: 1px solid var(--line); background: var(--panel2);
+          display: flex; flex-direction: column; min-height: 0; }
+  .controls { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select, button, input {
+    font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 9px; outline: none;
+  }
+  button { cursor: pointer; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #071026; font-weight: 700; }
+  button.ghost { background: transparent; }
+  label.tiny { color: var(--muted); font-size: 12px; }
+
+  .diag { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .diag h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+             color: var(--muted); margin: 0 0 8px; }
+  .verdict { font-size: 13px; }
+  .culprit { background: #2a1518; border: 1px solid #5b2a2f; border-radius: 10px;
+             padding: 10px 12px; margin: 8px 0; }
+  .culprit .rail { font-weight: 800; color: #ffb4b4; }
+  .culprit .act { color: #f3c7c7; font-size: 12.5px; margin-top: 4px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #1b2540;
+          border: 1px solid var(--line); color: #cdd9f2; cursor: pointer; }
+  .steps { margin: 6px 0 0; padding-left: 18px; color: #cdd9f2; font-size: 12.5px; }
+  .steps li { margin: 2px 0; }
+
+  .tplist { overflow: auto; padding: 6px 8px; flex: 1; min-height: 0; }
+  .tpitem { display: grid; grid-template-columns: 54px 1fr 92px 74px; gap: 8px;
+            align-items: center; padding: 6px 6px; border-radius: 8px; }
+  .tpitem:hover { background: #16203a; }
+  .tpitem.sel { background: #17233f; outline: 1px solid var(--brand); }
+  .tpitem .lab { font-weight: 700; font-size: 12.5px; }
+  .tpitem .nm { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpitem .spec { color: var(--muted); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tpitem input { width: 100%; padding: 4px 6px; text-align: right; }
+  .badge { justify-self: end; font-size: 10.5px; font-weight: 800; padding: 2px 7px;
+           border-radius: 999px; }
+  .b-pass { background: rgba(52,211,153,.18); color: var(--pass); }
+  .b-fail { background: rgba(248,113,113,.18); color: var(--fail); }
+  .b-na   { background: rgba(75,90,118,.25); color: var(--muted); }
+  .b-2nd  { background: rgba(251,191,36,.18); color: var(--warn); }
+  .legend { display: flex; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--line);
+            color: var(--muted); font-size: 11.5px; align-items: center; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Snowbird PCB Debug Accelerator</h1>
+  <span class="sub" id="sub">loading…</span>
+  <span class="spacer"></span>
+  <label class="tiny"><input type="checkbox" id="toggleLabels" style="width:auto"> TP labels</label>
+  <span class="pill" id="statPill"></span>
+</header>
+
+<main>
+  <section class="board" id="boardWrap">
+    <svg id="svg" preserveAspectRatio="xMidYMid meet"></svg>
+  </section>
+
+  <aside>
+    <div class="controls">
+      <div class="row">
+        <label class="tiny">Complaint</label>
+        <select id="complaint"><option value="">All test points</option></select>
+        <button class="ghost" id="clearBtn">Clear values</button>
+        <button class="primary" id="demoBtn">Demo fault</button>
+      </div>
+      <div class="row" style="margin-top:8px; color:var(--muted); font-size:12px">
+        Enter measured values; out-of-spec rails isolate the suspected circuit on the board.
+      </div>
+    </div>
+
+    <div class="diag" id="diag">
+      <h2>Diagnosis</h2>
+      <div class="verdict" id="verdict">No measurements yet.</div>
+    </div>
+
+    <div class="tplist" id="tplist"></div>
+
+    <div class="legend">
+      <span><span class="dot" style="background:var(--fail)"></span>root-cause rail</span>
+      <span><span class="dot" style="background:var(--warn)"></span>suspected component / secondary</span>
+      <span><span class="dot" style="background:var(--pass)"></span>pass</span>
+      <span><span class="dot" style="background:var(--na)"></span>not measured</span>
+    </div>
+  </aside>
+</main>
+
+<script src="board.data.js"></script>
+<script>
+const B = window.BOARD;
+const byId = Object.fromEntries(B.test_points.map(t => [t.id, t]));
+const values = {};            // id -> measured string
+let selected = null;          // selected test point id
+
+// ---------- coordinate transform (KiCad mm -> SVG, Y flipped) ----------
+const bb = B.bbox, W = bb.maxx - bb.minx, H = bb.maxy - bb.miny;
+const PAD = 4;
+const svg = document.getElementById('svg');
+svg.setAttribute('viewBox', `${-PAD} ${-PAD} ${W + 2*PAD} ${H + 2*PAD}`);
+const tx = x => x - bb.minx;
+const ty = y => bb.maxy - y;     // flip so board top is up
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+// ---------- draw board ----------
+const gBoard = el('g', {}, svg);
+const gComp = el('g', {}, svg);
+const gTp = el('g', {}, svg);
+
+// outline
+for (const [x1, y1, x2, y2] of B.outline) {
+  el('line', { x1: tx(x1), y1: ty(y1), x2: tx(x2), y2: ty(y2),
+    stroke: '#66e39a', 'stroke-width': .3, 'stroke-linecap': 'round' }, gBoard);
+}
+
+// test point markers
+const tpNodes = {};
+for (const t of B.test_points) {
+  if (t.x == null) continue;
+  const g = el('g', { class: 'tp' }, gTp);
+  const ring = el('circle', { class: 'ring', cx: tx(t.x), cy: ty(t.y), r: 2.6,
+    stroke: 'none', 'stroke-width': .5 }, g);
+  const dot = el('circle', { class: 'tp-dot', cx: tx(t.x), cy: ty(t.y), r: 1.15,
+    fill: '#4b5a76' }, g);
+  el('text', { class: 'tp-label', x: tx(t.x) + 1.8, y: ty(t.y) + .6 }, g).textContent = t.label;
+  g.addEventListener('click', () => selectTp(t.id));
+  tpNodes[t.id] = { ring, dot };
+}
+
+document.getElementById('toggleLabels').addEventListener('change', e => {
+  document.getElementById('boardWrap').classList.toggle('labels', e.target.checked);
+});
+
+// ---------- diagnosis ----------
+function statusOf(t) {
+  const v = values[t.id];
+  if (v == null || v === '') return 'na';
+  const x = parseFloat(v);
+  if (isNaN(x)) return 'na';
+  if (t.lsl != null && x < t.lsl) return 'fail';
+  if (t.usl != null && x > t.usl) return 'fail';
+  return 'pass';
+}
+const isRoot = id => !B.power_tree[id] || String(B.power_tree[id].parent).startsWith('__');
+const parentOf = id => (B.power_tree[id] || {}).parent;
+
+function diagnose() {
+  const fails = B.test_points.filter(t => statusOf(t) === 'fail').map(t => t.id);
+  const failSet = new Set(fails);
+  // root cause = failed node whose parent is not itself failed
+  const roots = [], secondary = [];
+  for (const id of fails) {
+    const p = parentOf(id);
+    if (isRoot(id) || !failSet.has(p)) roots.push(id);
+    else secondary.push(id);
+  }
+  return { fails: failSet, roots, secondary };
+}
+
+function suspectedComponents(rootIds) {
+  const seen = new Set(), out = [];
+  for (const id of rootIds) {
+    for (const c of (byId[id].components || [])) {
+      if (c.x == null || seen.has(c.ref)) continue;
+      seen.add(c.ref); out.push(c);
+    }
+  }
+  return out;
+}
+
+// ---------- render ----------
+function render() {
+  const { fails, roots, secondary } = diagnose();
+  const rootSet = new Set(roots), secSet = new Set(secondary);
+
+  // board: color test points
+  for (const t of B.test_points) {
+    const n = tpNodes[t.id]; if (!n) continue;
+    const st = statusOf(t);
+    let fill = '#4b5a76';
+    if (st === 'pass') fill = '#34d399';
+    else if (st === 'fail') fill = rootSet.has(t.id) ? '#f87171' : '#fbbf24';
+    n.dot.setAttribute('fill', fill);
+    n.dot.setAttribute('r', rootSet.has(t.id) ? 1.7 : 1.15);
+    const showRing = rootSet.has(t.id) || t.id === selected;
+    n.ring.setAttribute('stroke', rootSet.has(t.id) ? '#f87171' : (t.id === selected ? '#5b8cff' : 'none'));
+    n.ring.setAttribute('r', rootSet.has(t.id) ? 3.0 : 2.6);
+  }
+
+  // board: suspected components (from root causes, or selected TP)
+  gComp.innerHTML = '';
+  const comps = roots.length ? suspectedComponents(roots)
+              : (selected ? (byId[selected].components || []).filter(c => c.x != null) : []);
+  for (const c of comps) {
+    el('circle', { class: 'comp-dot', cx: tx(c.x), cy: ty(c.y), r: .8 }, gComp);
+    el('text', { class: 'comp-label', x: tx(c.x) + .9, y: ty(c.y) + .4 }, gComp).textContent = c.ref;
+  }
+
+  renderVerdict(roots, secondary, comps);
+  renderList(fails, rootSet, secSet);
+  document.getElementById('statPill').textContent =
+    `${fails.size} fail · ${roots.length} root-cause`;
+}
+
+function renderVerdict(roots, secondary, comps) {
+  const v = document.getElementById('verdict');
+  if (!roots.length && !secondary.length) {
+    v.innerHTML = Object.keys(values).length
+      ? '<span style="color:var(--pass)">All measured rails within spec.</span>'
+      : 'No measurements yet. Enter a value or click <b>Demo fault</b>.';
+    return;
+  }
+  let html = '';
+  for (const id of roots) {
+    const t = byId[id];
+    const ft = B.fault_trees[t.group] || B.fault_trees[t.name];
+    html += `<div class="culprit">
+      <div><span class="rail">${t.label} — ${t.name}</span>
+        <span style="color:var(--muted)"> · net ${t.net ?? '?'} · phase ${t.phase ?? '?'}</span></div>
+      ${t.fail_action ? `<div class="act">${t.fail_action}</div>` : ''}
+      <div class="chips">${(t.components||[]).slice(0,16)
+        .map(c => `<span class="chip" title="${c.value||''}">${c.ref}</span>`).join('')}</div>
+      ${ft ? `<ol class="steps">${ft.steps.slice(0,7).map(s=>`<li>${s.replace(/^\d+\.\s*/,'')}</li>`).join('')}</ol>` : ''}
+    </div>`;
+  }
+  if (secondary.length) {
+    html += `<div style="color:var(--warn);font-size:12.5px;margin-top:4px">
+      Downstream (likely secondary): ${secondary.map(i=>byId[i].label).join(', ')}</div>`;
+  }
+  html += `<div style="color:var(--muted);font-size:12px;margin-top:6px">
+    ${comps.length} suspected components highlighted on the board.</div>`;
+  v.innerHTML = html;
+}
+
+// ---------- test point list ----------
+function currentList() {
+  const c = document.getElementById('complaint').value;
+  if (c && B.complaint_branches[c]) {
+    return B.complaint_branches[c].map(id => byId[id]).filter(Boolean);
+  }
+  return B.test_points;
+}
+
+function renderList(fails, rootSet, secSet) {
+  const wrap = document.getElementById('tplist');
+  wrap.innerHTML = '';
+  for (const t of currentList()) {
+    const st = statusOf(t);
+    const item = document.createElement('div');
+    item.className = 'tpitem' + (t.id === selected ? ' sel' : '');
+    const spec = [
+      t.lsl != null ? `${t.lsl}` : '—',
+      t.usl != null ? `${t.usl}` : '—',
+    ].join(' … ') + (t.unit ? ` ${t.unit}` : '');
+    let badge = 'b-na', btext = '—';
+    if (st === 'pass') { badge = 'b-pass'; btext = 'PASS'; }
+    else if (st === 'fail') { badge = rootSet.has(t.id) ? 'b-fail' : 'b-2nd';
+      btext = rootSet.has(t.id) ? 'ROOT' : 'FAIL'; }
+    item.innerHTML = `
+      <div class="lab">${t.label ?? '—'}</div>
+      <div class="nm" title="${t.name||''}">${t.name||''}</div>
+      <div class="spec">${spec}</div>
+      <input type="number" step="any" placeholder="meas" value="${values[t.id] ?? ''}" />
+      <span class="badge ${badge}">${btext}</span>`;
+    const input = item.querySelector('input');
+    input.addEventListener('input', e => { values[t.id] = e.target.value; render(); });
+    item.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') selectTp(t.id); });
+    wrap.appendChild(item);
+  }
+}
+
+function selectTp(id) { selected = (selected === id ? null : id); render(); }
+
+// ---------- controls ----------
+const compSel = document.getElementById('complaint');
+for (const key of Object.keys(B.complaint_branches || {})) {
+  const o = document.createElement('option'); o.value = key; o.textContent = key; compSel.appendChild(o);
+}
+compSel.addEventListener('change', render);
+document.getElementById('clearBtn').addEventListener('click', () => {
+  for (const k in values) delete values[k]; selected = null; render();
+});
+document.getElementById('demoBtn').addEventListener('click', () => {
+  for (const k in values) delete values[k];
+  // Simulate a dead PoE 5V rail: input rail good, 5V rail = 0, downstream also 0.
+  const good = byId['V_POE_POWER_RAIL']; if (good) values[good.id] = good.nom ?? ((good.lsl+good.usl)/2 || 48);
+  const dead = ['V_TP1205_POE_5V','V_TP579_VDD_CX','V_TP27_VDD_SOC_CX','V_TP574_VDD_DDR'];
+  for (const id of dead) if (byId[id]) values[id] = 0;
+  compSel.value = 'DEAD'; render();
+});
+
+document.getElementById('sub').textContent =
+  `${B.product?.product || B.program} · ${B.stats.footprints} components · ${B.stats.test_points_resolved}/${B.stats.test_points} test points located · ${B.size_mm.w}×${B.size_mm.h} mm`;
+
+render();
+</script>
+</body>
+</html>
