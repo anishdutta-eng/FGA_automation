@@ -54,17 +54,3 @@ reports/*
 
 # Personal / local-only documents (not for the repo)
 WORK_ACCOMPLISHMENT.md
-
-# ── PCB debug engine (engine/) ────────────────────────────────────────────
-# Large binary inputs are kept locally but NOT pushed (they bloat the Pages
-# repo and are only needed to regenerate board.json, not at runtime).
-engine/source/*.brd
-engine/source/**/*.STEP
-engine/source/**/*.step
-engine/source/**/*.kicad_pcb
-engine/source/**/*.kicad_pcb.orig
-engine/source/**/*.orig
-
-# The generic build/ rule above also hides engine/build/ — keep the scripts.
-!engine/build/
-!engine/build/**
