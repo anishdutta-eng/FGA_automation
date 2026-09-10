@@ -1,3 +1,14 @@
+/* Self-hosted DM Sans (variable) — no external CDN, so it renders under
+   Canopy's CSP. Vite fingerprints the woff2 and rewrites the URL for whatever
+   base path the app is built with. */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/DMSans-variable.woff2') format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
