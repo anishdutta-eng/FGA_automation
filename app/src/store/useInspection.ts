@@ -17,12 +17,35 @@ function newSlide(): PhotoSlide {
   return { id: nanoid(), photos: [], observations: [] };
 }
 
-function buildPhases(): Phase[] {
+export function buildPhases(): Phase[] {
   return PHASE_TEMPLATES.map((t) => ({
     ...t,
     unitBasis: t.unitBasis ?? 'unit',
     slides: [newSlide()],
   }));
+}
+
+/**
+ * Bring a saved inspection onto the current canonical phase list without
+ * discarding captured work. Current template metadata/order wins; matching
+ * phases retain their slides and trials override, while newly added phases get
+ * one empty slide. Templates removed from the app are intentionally omitted.
+ */
+export function reconcilePhases(savedPhases: Phase[]): Phase[] {
+  const savedById = new Map(savedPhases.map((phase) => [phase.id, phase]));
+
+  return buildPhases().map((configured) => {
+    const saved = savedById.get(configured.id);
+    if (!saved) return configured;
+
+    return {
+      ...configured,
+      slides: saved.slides.length > 0 ? saved.slides : configured.slides,
+      ...(saved.trialsOverride == null
+        ? {}
+        : { trialsOverride: saved.trialsOverride }),
+    };
+  });
 }
 
 function makeEmptyMeta(): InspectionMeta {

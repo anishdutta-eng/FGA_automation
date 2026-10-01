@@ -1,5 +1,5 @@
 import type { InspectionMeta, Phase, PhotoRef, PhotoSlide } from '@/types';
-import { useInspection } from '@/store/useInspection';
+import { reconcilePhases, useInspection } from '@/store/useInspection';
 import { usePersistence } from '@/store/usePersistence';
 import { saveState, loadState, clearState } from './db';
 
@@ -46,11 +46,16 @@ export async function hydrate(): Promise<void> {
   try {
     const snap = await loadState<Snapshot>();
     if (snap && snap.schema === SCHEMA_VERSION && snap.stage === 'capture') {
+      const phases = reconcilePhases(restoreUrls(snap.phases));
+      const activePhaseId = phases.some((phase) => phase.id === snap.activePhaseId)
+        ? snap.activePhaseId
+        : phases[0]?.id ?? null;
+
       useInspection.setState({
         stage: snap.stage,
         meta: snap.meta,
-        activePhaseId: snap.activePhaseId,
-        phases: restoreUrls(snap.phases),
+        activePhaseId,
+        phases,
       });
     } else if (snap && snap.schema !== SCHEMA_VERSION) {
       // Old/incompatible snapshot — clear it.

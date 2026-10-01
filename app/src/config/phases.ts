@@ -21,11 +21,20 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
+    id: 'internal-case-pack',
+    title: 'Internal Case Pack',
+    guidance:
+      'Open the outer case pack and photograph the internal packing configuration. Verify product count and orientation, dividers and protective materials, fit, cleanliness, and any internal damage. This inspection is performed once per sampled case pack.',
+    slideOrder: 2,
+    required: true,
+    unitBasis: 'pack',
+  },
+  {
     id: 'external-retail-box',
     title: 'External Retail Box',
     guidance:
       'Photograph the retail box exterior, all faces. Verify print quality, artwork alignment, and seals.',
-    slideOrder: 2,
+    slideOrder: 3,
     required: true,
   },
   {
@@ -33,7 +42,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Artwork Validation',
     guidance:
       'Validate printed artwork against the approved reference: logos, legal marks, text, colors, barcodes, and placement.',
-    slideOrder: 3,
+    slideOrder: 4,
     required: true,
   },
   {
@@ -41,7 +50,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Tear Label Inspection',
     guidance:
       'Inspect the tear label / tamper evidence. Confirm placement, adhesion, and that it tears correctly.',
-    slideOrder: 4,
+    slideOrder: 5,
     required: true,
   },
   {
@@ -49,7 +58,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Internal SKU Box tray',
     guidance:
       'Photograph the inner SKU packaging and tray, and how the device is seated. Verify fit and protective materials.',
-    slideOrder: 5,
+    slideOrder: 6,
     required: true,
   },
   {
@@ -57,7 +66,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Device Inspection',
     guidance:
       'Remove the device and inspect it. Confirm the "Not For Sale" label is attached, and check for surface cracks, fractures, and dirt.',
-    slideOrder: 6,
+    slideOrder: 7,
     required: true,
   },
   {
@@ -65,7 +74,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Packing Tray',
     guidance:
       'Photograph the packing tray. Verify structure, fit, and absence of damage.',
-    slideOrder: 7,
+    slideOrder: 8,
     required: true,
   },
   {
@@ -73,7 +82,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'PSU',
     guidance:
       'Inspect and photograph the power supply unit. Check condition, labels, cable, and connector.',
-    slideOrder: 8,
+    slideOrder: 9,
     required: true,
   },
   {
@@ -81,7 +90,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Ethernet Cable',
     guidance:
       'Inspect and photograph the ethernet cable(s). Check condition, length, and connectors. One cable per box, so FR is over the number of samples.',
-    slideOrder: 9,
+    slideOrder: 10,
     required: true,
     // Exactly one ethernet cable per box (1PK/2PK/3PK/Basic Box), so the FR
     // denominator is the number of samples, not units-per-pack x samples.
@@ -92,7 +101,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'WSL',
     guidance:
       'Inspect and photograph the WSL. Verify presence, correctness, and condition. One per box, so FR is over the number of samples.',
-    slideOrder: 10,
+    slideOrder: 11,
     required: true,
     unitBasis: 'pack',
   },
@@ -101,7 +110,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Accessories',
     guidance:
       'Inspect and photograph the remaining accessories (clamps, adapters, etc.). One set per box, so FR is over the number of samples.',
-    slideOrder: 11,
+    slideOrder: 12,
     required: true,
     unitBasis: 'pack',
   },
@@ -110,7 +119,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'QR Codes',
     guidance:
       'Verify all QR codes are present and scannable. Capture a photo of each and note scan results.',
-    slideOrder: 12,
+    slideOrder: 13,
     required: true,
   },
   {
@@ -118,7 +127,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Power-On Test',
     guidance:
       'Confirm the device powers on. Photograph the LED/boot state and note the result.',
-    slideOrder: 13,
+    slideOrder: 14,
     required: true,
   },
 ];
