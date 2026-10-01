@@ -21,20 +21,11 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     required: true,
   },
   {
-    id: 'internal-case-pack',
-    title: 'Internal Case Pack',
-    guidance:
-      'Open the outer case pack and photograph the internal packing configuration. Verify product count and orientation, dividers and protective materials, fit, cleanliness, and any internal damage. This inspection is performed once per sampled case pack.',
-    slideOrder: 2,
-    required: true,
-    unitBasis: 'pack',
-  },
-  {
     id: 'external-retail-box',
     title: 'External Retail Box',
     guidance:
       'Photograph the retail box exterior, all faces. Verify print quality, artwork alignment, and seals.',
-    slideOrder: 3,
+    slideOrder: 2,
     required: true,
   },
   {
@@ -42,7 +33,7 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Artwork Validation',
     guidance:
       'Validate printed artwork against the approved reference: logos, legal marks, text, colors, barcodes, and placement.',
-    slideOrder: 4,
+    slideOrder: 3,
     required: true,
   },
   {
@@ -50,8 +41,17 @@ export const PHASE_TEMPLATES: PhaseTemplate[] = [
     title: 'Tear Label Inspection',
     guidance:
       'Inspect the tear label / tamper evidence. Confirm placement, adhesion, and that it tears correctly.',
+    slideOrder: 4,
+    required: true,
+  },
+  {
+    id: 'internal-case-pack',
+    title: 'Internal Case Pack',
+    guidance:
+      'Open the outer case pack and photograph the internal packing configuration. Verify product count and orientation, dividers and protective materials, fit, cleanliness, and any internal damage. This inspection is performed once per sampled case pack.',
     slideOrder: 5,
     required: true,
+    unitBasis: 'pack',
   },
   {
     id: 'internal-sku-box',
