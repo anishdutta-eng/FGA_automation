@@ -1,7 +1,7 @@
 {
   "name": "fga-inspection-tool",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.4.3",
   "type": "module",
   "description": "FGA hardware inspection capture tool — drag-and-drop photo documentation with risk-scored observations and Google Slides export.",
   "scripts": {
@@ -18,6 +18,7 @@
     "pptxgenjs": "^3.12.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "unicode-segmenter": "^0.17.3",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

@@ -23,6 +23,14 @@ import {
   TITLE,
 } from './theme';
 import { encodePhotos, fitContain, type EncodedPhoto } from './imageUtils';
+import {
+  FINDINGS_CELL_MARGIN,
+  FINDINGS_COL_WIDTHS,
+  FINDINGS_HEADER_HEIGHT,
+  FINDINGS_TABLE_Y,
+  paginateFindingRows,
+  type FindingInputRow,
+} from './findingsPagination';
 import { APP_VERSION } from '@/version';
 
 export interface ProgressInfo {
@@ -305,23 +313,25 @@ function buildSummarySlide(pptx: PptxGenJS, ins: Inspection) {
   });
 }
 
-function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
-  const slide = pptx.addSlide();
-  slide.background = { color: COLORS.paper };
-  const name = [ins.productName, ins.sku, ins.countryCode]
-    .map((v) => v.trim())
-    .filter(Boolean)
-    .join(' ');
-  slideHeading(slide, `FGA ${name}${name ? ' ' : ''}Summary`);
+interface FindingsRowMeta {
+  phaseText: string;
+  phaseFill: string;
+  frText: string;
+  frFill: string;
+  modeText: string;
+  modeBold: boolean;
+  muted: boolean;
+}
 
-  const header = [
+function findingsHeader(): PptxGenJS.TableRow {
+  return [
     'Topic',
     'FR',
     'Failure mode',
     'Next steps / comment',
     'DRI',
-  ].map((t) => ({
-    text: t,
+  ].map((text) => ({
+    text,
     options: {
       bold: true,
       color: COLORS.white,
@@ -330,90 +340,164 @@ function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
       valign: 'middle' as const,
     },
   }));
+}
 
-  // One row per observation, grouped under its phase. Each observation gets its
-  // own FR (in the FR column) alongside its own failure mode, next steps, and
-  // DRI — nothing is collapsed into a single "common" failure any more.
-  const rows: PptxGenJS.TableRow[] = [];
+/**
+ * Build one or more findings pages. Pagination is deliberate rather than left
+ * to PptxGenJS: its auto-pager estimates rows shorter than the explicit rowH it
+ * emits, which can push a long table below the slide/footer. Every continuation
+ * gets its own heading, repeated column header, phase context, and footer.
+ */
+export function buildFindingsTable(pptx: PptxGenJS, ins: Inspection) {
+  const name = [ins.productName, ins.sku, ins.countryCode]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(' ');
+  const summaryTitle = `FGA ${name}${name ? ' ' : ''}Summary`;
+  const rows: FindingInputRow<FindingsRowMeta>[] = [];
 
   for (const phase of reportablePhases(ins.phases)) {
     const units = phaseUnits(ins, phase);
-    const obs = phaseObservations(phase);
-    const pColor = aggregateColor(obs) ?? 'good';
-    const pp = RISK_PALETTE[pColor];
+    const observations = phaseObservations(phase);
+    const phaseColor = aggregateColor(observations) ?? 'good';
+    const phasePalette = RISK_PALETTE[phaseColor];
 
-    // Topic cell: phase title, shown once and colour-banded across the group.
-    const topicCell = (first: boolean): PptxGenJS.TableCell =>
-      first
-        ? {
-            text: phase.title,
-            options: { bold: true, color: pp.text, fill: { color: pp.soft }, valign: 'middle', fontSize: FONT.small },
-          }
-        : { text: '', options: { fill: { color: pp.soft } } };
-
-    if (obs.length === 0) {
-      // Reportable because it has photos, but nothing was observed.
-      rows.push([
-        topicCell(true),
-        { text: '—', options: { align: 'center', fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
-        { text: 'Photos captured; no observations recorded.', options: { fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
-        { text: '—', options: { fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
-        { text: '—', options: { align: 'center', fontSize: FONT.small, color: COLORS.muted, valign: 'middle' } },
-      ]);
+    if (observations.length === 0) {
+      rows.push({
+        phaseId: phase.id,
+        phaseTitle: phase.title,
+        values: [
+          phase.title,
+          '—',
+          'Photos captured; no observations recorded.',
+          '—',
+          '—',
+        ],
+        meta: {
+          phaseText: phasePalette.text,
+          phaseFill: phasePalette.soft,
+          frText: COLORS.muted,
+          frFill: COLORS.panel,
+          modeText: COLORS.muted,
+          modeBold: false,
+          muted: true,
+        },
+      });
       continue;
     }
 
-    obs.forEach((o, idx) => {
-      const oc = colorOf(o);
-      const op = RISK_PALETTE[oc];
-      const ofr = observationFr(o, units);
-      const isGood = o.risk === 'good';
+    for (const observation of observations) {
+      const observationPalette = RISK_PALETTE[colorOf(observation)];
+      const fr = observationFr(observation, units);
       const tag =
-        o.status === 'waived'
+        observation.status === 'waived'
           ? '[WAIVED] '
-          : o.status === 'discuss'
+          : observation.status === 'discuss'
             ? '[DISCUSS] '
             : '';
-      // The failure mode column shows the observation description: the explicit
-      // failure-mode field if provided, otherwise the observation text.
-      const mode = o.failureMode || o.text || op.label;
+      const mode =
+        observation.failureMode || observation.text || observationPalette.label;
 
-      rows.push([
-        topicCell(idx === 0),
-        {
-          text: `${ofr.label} · ${ofr.percent}`,
-          options: { align: 'center', color: op.text, fill: { color: op.soft }, fontSize: FONT.small, valign: 'middle' },
+      rows.push({
+        phaseId: phase.id,
+        phaseTitle: phase.title,
+        values: [
+          phase.title,
+          `${fr.label} · ${fr.percent}`,
+          `${tag}${mode}`,
+          observation.nextSteps || '—',
+          observation.dri || '—',
+        ],
+        meta: {
+          phaseText: phasePalette.text,
+          phaseFill: phasePalette.soft,
+          frText: observationPalette.text,
+          frFill: observationPalette.soft,
+          modeText: observationPalette.text,
+          modeBold: observation.risk !== 'good',
+          muted: false,
         },
-        {
-          text: `${tag}${mode}`,
-          options: { color: op.text, bold: !isGood, fontSize: FONT.small, valign: 'middle' },
-        },
-        {
-          text: o.nextSteps || '—',
-          options: { color: COLORS.ink, fontSize: FONT.small, valign: 'middle' },
-        },
-        {
-          text: o.dri || '—',
-          options: { align: 'center', color: COLORS.ink, fontSize: FONT.small, valign: 'middle' },
-        },
-      ]);
-    });
+      });
+    }
   }
 
-  slide.addTable([header, ...rows], {
-    x: 0.5,
-    y: 1.45,
-    w: 12.33,
-    colW: [2.8, 1.3, 4.2, 2.73, 1.3],
-    rowH: 0.4,
-    fontFace: FONT.face,
-    border: { type: 'solid', color: COLORS.line, pt: 1 },
-    valign: 'middle',
-    autoPage: true,
-    autoPageRepeatHeader: true,
-  });
+  const pages = paginateFindingRows(rows);
+  pages.forEach((page, pageIndex) => {
+    const slide = pptx.addSlide();
+    slide.background = { color: COLORS.paper };
+    slideHeading(
+      slide,
+      `${summaryTitle}${pageIndex > 0 ? ' (continued)' : ''}`,
+    );
 
-  footer(slide);
+    const tableRows: PptxGenJS.TableRow[] = page.rows.map((row) => {
+      const [topic, fr, mode, nextSteps, dri] = row.values;
+      const meta = row.meta;
+      return [
+        {
+          text: topic,
+          options: {
+            bold: Boolean(topic),
+            color: meta.phaseText,
+            fill: { color: meta.phaseFill },
+            fontSize: FONT.small,
+            valign: 'middle',
+          },
+        },
+        {
+          text: fr,
+          options: {
+            align: 'center',
+            color: meta.frText,
+            fill: { color: meta.frFill },
+            fontSize: FONT.small,
+            valign: 'middle',
+          },
+        },
+        {
+          text: mode,
+          options: {
+            color: meta.modeText,
+            bold: meta.modeBold,
+            fontSize: FONT.small,
+            valign: 'middle',
+          },
+        },
+        {
+          text: nextSteps,
+          options: {
+            color: meta.muted ? COLORS.muted : COLORS.ink,
+            fontSize: FONT.small,
+            valign: 'middle',
+          },
+        },
+        {
+          text: dri,
+          options: {
+            align: 'center',
+            color: meta.muted ? COLORS.muted : COLORS.ink,
+            fontSize: FONT.small,
+            valign: 'middle',
+          },
+        },
+      ];
+    });
+
+    slide.addTable([findingsHeader(), ...tableRows], {
+      x: 0.5,
+      y: FINDINGS_TABLE_Y,
+      w: 12.33,
+      colW: [...FINDINGS_COL_WIDTHS],
+      rowH: [FINDINGS_HEADER_HEIGHT, ...page.rows.map((row) => row.height)],
+      margin: [...FINDINGS_CELL_MARGIN],
+      fontFace: FONT.face,
+      border: { type: 'solid', color: COLORS.line, pt: 1 },
+      valign: 'middle',
+      autoPage: false,
+    });
+
+    footer(slide);
+  });
 }
 
 /** Build one deck slide from a single photo-slide (its photos + observations). */

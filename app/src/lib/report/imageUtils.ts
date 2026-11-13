@@ -1,7 +1,7 @@
 import type { PhotoRef } from '@/types';
 
-const MAX_EXPORT_EDGE_PX = 3200;
-const JPEG_QUALITY = 0.92;
+const MAX_EXPORT_EDGE_PX = 2400;
+const JPEG_QUALITY = 0.86;
 
 export interface EncodedPhoto {
   id: string;
@@ -108,7 +108,7 @@ export async function normalizePhotoForPptx(
   );
   const width = Math.max(1, Math.round(loaded.width * scale));
   const height = Math.max(1, Math.round(loaded.height * scale));
-  const outputType = blob.type.toLowerCase() === 'image/png' ? 'image/png' : 'image/jpeg';
+  const outputType = 'image/jpeg' as const;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -119,12 +119,11 @@ export async function normalizePhotoForPptx(
 
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
-    if (outputType === 'image/jpeg') {
-      // JPEG has no alpha channel; use a predictable background for PNG/WebP/
-      // HEIC inputs containing transparency instead of browser-dependent black.
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, width, height);
-    }
+    // Report photos are always encoded as JPEG. PNG is lossless and made
+    // photo-heavy reports exceed Google Slides' 100 MB conversion limit.
+    // A white background gives transparent uploads a predictable appearance.
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
     context.drawImage(loaded.image, 0, 0, width, height);
 
     const normalized = await canvasToBlob(canvas, outputType);
